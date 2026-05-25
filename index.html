@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>승한이 영어 게임</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #1A1A4E 0%, #0D0D1A 100%);
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px 32px;
+    overflow-x: hidden;
+  }
+  .title-wrap { text-align: center; margin-bottom: 28px; }
+  .title-emoji { font-size: 64px; animation: float 2s ease-in-out infinite; display: block; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  h1 { font-size: 26px; font-weight: 900; color: #FFD700;
+       text-shadow: 0 0 18px rgba(255,215,0,0.5); margin-top: 6px; }
+  .sub { font-size: 14px; color: #aaa; margin-top: 4px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 420px; }
+  .card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 10px; border-radius: 20px; text-decoration: none;
+    touch-action: manipulation; transition: transform 0.12s, box-shadow 0.12s;
+    gap: 8px; min-height: 130px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+  .card:active { transform: scale(0.94); }
+  .card-emoji { font-size: 44px; line-height: 1; }
+  .card-name { font-size: 16px; font-weight: 900; color: #fff; text-align: center; }
+  .card-desc { font-size: 12px; color: rgba(255,255,255,0.65); text-align: center; line-height: 1.4; }
+
+  .c1 { background: linear-gradient(135deg, #FF5722, #FF8C00); }
+  .c2 { background: linear-gradient(135deg, #4ECDC4, #26A69A); }
+  .c3 { background: linear-gradient(135deg, #7B61FF, #4A90D9); }
+  .c4 { background: linear-gradient(135deg, #FF6B6B, #E040FB); }
+  .c5 { background: linear-gradient(135deg, #43A047, #00BCD4); }
+  .c6 { background: linear-gradient(135deg, #F9A825, #FF7043); }
+  .c7 { background: linear-gradient(135deg, #26C6DA, #7B1FA2); }
+
+  .full { grid-column: span 2; min-height: 110px; }
+
+  .day-badge {
+    margin-top: 24px; font-size: 13px; color: #888;
+    background: rgba(255,255,255,0.06); border-radius: 20px; padding: 6px 18px;
+  }
+</style>
+</head>
+<body>
+<div class="title-wrap">
+  <span class="title-emoji">🤖</span>
+  <h1>승한이 영어 게임!</h1>
+  <div class="sub">어떤 게임 할까요?</div>
+</div>
+
+<div class="grid">
+  <a class="card c1" href="speech.html">
+    <span class="card-emoji">🎙️</span>
+    <span class="card-name">말하기 연습</span>
+    <span class="card-desc">영웅 대사<br>읽고 변신!</span>
+  </a>
+  <a class="card c2" href="memory.html">
+    <span class="card-emoji">🃏</span>
+    <span class="card-name">메모리 게임</span>
+    <span class="card-desc">짝 맞추면<br>로봇 변신!</span>
+  </a>
+  <a class="card c3" href="balloon.html">
+    <span class="card-emoji">🎈</span>
+    <span class="card-name">풍선 터뜨리기</span>
+    <span class="card-desc">단어 듣고<br>풍선 터치!</span>
+  </a>
+  <a class="card c4" href="quiz.html">
+    <span class="card-emoji">🦸</span>
+    <span class="card-name">영웅 퀴즈</span>
+    <span class="card-desc">그림 보고<br>단어 맞추기!</span>
+  </a>
+  <a class="card c5" href="fishing.html">
+    <span class="card-emoji">🎣</span>
+    <span class="card-name">단어 낚시</span>
+    <span class="card-desc">부르는 단어<br>물고기 잡기!</span>
+  </a>
+  <a class="card c6" href="story.html">
+    <span class="card-emoji">📖</span>
+    <span class="card-name">이야기 순서</span>
+    <span class="card-desc">그림 카드로<br>문장 순서 맞추기!</span>
+  </a>
+  <a class="card c7 full" href="tetris.html">
+    <span class="card-emoji">🧱</span>
+    <span class="card-name">영웅 블록 쌓기</span>
+    <span class="card-desc">블록 떨어지면<br>단어 듣고 쌓기!</span>
+  </a>
+</div>
+
+<div class="day-badge" id="day-badge">대회까지 로딩 중...</div>
+
+<script>
+const TARGET = new Date('2026-07-05');
+const today  = new Date(); today.setHours(0,0,0,0);
+const diff   = Math.ceil((TARGET - today) / 86400000);
+document.getElementById('day-badge').textContent =
+  diff > 0 ? `🏆 대회까지 D-${diff}` : diff === 0 ? '🏆 오늘이 대회날!' : '🎉 대회 완료!';
+</script>
+</body>
+</html>

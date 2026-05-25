@@ -1,0 +1,6 @@
+.playwright-mcp/
+__pycache__/
+*.pyc
+_bmad-output/
+*.log
+.DS_Store

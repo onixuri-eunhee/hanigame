@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFDE7"/>
+    <stop offset="100%" stop-color="#FFF9C4"/>
+  </linearGradient></defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <ellipse cx="120" cy="228" rx="52" ry="9" fill="rgba(0,0,0,0.10)"/>
+
+
+  <circle cx="120" cy="62" r="40" fill="#FDBCB4"/>
+  <ellipse cx="120" cy="42" rx="36" ry="22" fill="#2C1A0E"/>
+  <circle cx="80" cy="62" r="10" fill="#FDBCB4"/>
+  <circle cx="160" cy="62" r="10" fill="#FDBCB4"/>
+  <circle cx="107" cy="64" r="8" fill="white"/>
+  <circle cx="133" cy="64" r="8" fill="white"/>
+  <circle cx="108" cy="65" r="5" fill="#222"/>
+  <circle cx="134" cy="65" r="5" fill="#222"/>
+  <circle cx="108" cy="65" r="2.5" fill="#4A90D9"/>
+  <circle cx="134" cy="65" r="2.5" fill="#4A90D9"/>
+  <circle cx="108" cy="65" r="1.5" fill="#111"/>
+  <circle cx="134" cy="65" r="1.5" fill="#111"/>
+  <circle cx="110" cy="63" r="1.3" fill="white"/>
+  <circle cx="136" cy="63" r="1.3" fill="white"/>
+  <ellipse cx="120" cy="74" rx="3.5" ry="2.5" fill="#F08070"/>
+  <path d="M 107 79 Q 120 90 133 79" stroke="#C1440E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="101" cy="76" r="8" fill="rgba(255,120,90,0.22)"/>
+  <circle cx="139" cy="76" r="8" fill="rgba(255,120,90,0.22)"/>
+  <!-- happy face - big smile override -->
+  <path d="M 106 90 Q 120 106 134 90" stroke="#C1440E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M 108 91 Q 120 104 132 91 Q 120 98 108 91 Z" fill="white" opacity="0.8"/>
+  <!-- body jumping (tilted) -->
+  <rect x="87" y="142" width="66" height="50" rx="13" fill="#7C4DFF" transform="rotate(-5 120 165)"/>
+  <!-- arms up both sides celebrating -->
+  <rect x="40" y="115" width="14" height="38" rx="7" fill="#7C4DFF" transform="rotate(20 47 134)"/>
+  <circle cx="35" cy="110" r="12" fill="#FDBCB4"/>
+  <rect x="186" y="115" width="14" height="38" rx="7" fill="#7C4DFF" transform="rotate(-20 193 134)"/>
+  <circle cx="205" cy="110" r="12" fill="#FDBCB4"/>
+  <!-- legs jumping -->
+  <rect x="92" y="188" width="22" height="25" rx="9" fill="#7C4DFF" transform="rotate(-8 103 200)"/>
+  <rect x="126" y="188" width="22" height="25" rx="9" fill="#7C4DFF" transform="rotate(8 137 200)"/>
+  <ellipse cx="100" cy="215" rx="13" ry="6" fill="#555" transform="rotate(-8 100 215)"/>
+  <ellipse cx="140" cy="215" rx="13" ry="6" fill="#555" transform="rotate(8 140 215)"/>
+  <!-- sparkles everywhere -->
+  <line x1="28" y1="65" x2="28" y2="79" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="21" y1="72" x2="35" y2="72" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="205" y1="65" x2="205" y2="77" stroke="#FF8CE8" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="199" y1="71" x2="211" y2="71" stroke="#FF8CE8" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="35" x2="50" y2="45" stroke="#69F0AE" stroke-width="2" stroke-linecap="round"/>
+  <line x1="45" y1="40" x2="55" y2="40" stroke="#69F0AE" stroke-width="2" stroke-linecap="round"/>
+  <line x1="190" y1="35" x2="190" y2="43" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round"/>
+  <line x1="186" y1="39" x2="194" y2="39" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round"/>
+  <!-- stars -->
+  <polygon points="120,18 122,25 129,25 123.5,29 125.5,36 120,32 114.5,36 116.5,29 111,25 118,25" fill="#FFD700"/>
+  <circle cx="70" cy="25" r="5" fill="#FF8CE8"/>
+  <circle cx="170" cy="22" r="5" fill="#69F0AE"/>
+
+</svg>

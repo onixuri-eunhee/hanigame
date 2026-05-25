@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#64B5F6"/>
+    <stop offset="100%" stop-color="#90CAF9"/>
+  </linearGradient></defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <ellipse cx="120" cy="228" rx="52" ry="9" fill="rgba(0,0,0,0.10)"/>
+
+
+  <circle cx="120" cy="72" r="40" fill="#FDBCB4"/>
+  <ellipse cx="120" cy="52" rx="36" ry="22" fill="#2C1A0E"/>
+  <circle cx="80" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="160" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="107" cy="74" r="8" fill="white"/>
+  <circle cx="133" cy="74" r="8" fill="white"/>
+  <circle cx="108" cy="75" r="5" fill="#222"/>
+  <circle cx="134" cy="75" r="5" fill="#222"/>
+  <circle cx="108" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="134" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="108" cy="75" r="1.5" fill="#111"/>
+  <circle cx="134" cy="75" r="1.5" fill="#111"/>
+  <circle cx="110" cy="73" r="1.3" fill="white"/>
+  <circle cx="136" cy="73" r="1.3" fill="white"/>
+  <ellipse cx="120" cy="84" rx="3.5" ry="2.5" fill="#F08070"/>
+  <path d="M 107 89 Q 120 100 133 89" stroke="#C1440E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="101" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <circle cx="139" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <!-- fire helmet -->
+  <path d="M 78 74 Q 78 34 120 32 Q 162 34 162 74 Z" fill="#E53935"/>
+  <rect x="72" y="70" width="96" height="12" rx="6" fill="#C62828"/>
+  <!-- body firefighter -->
+  <rect x="87" y="148" width="66" height="52" rx="13" fill="#E53935"/>
+  <rect x="87" y="172" width="66" height="9" rx="4" fill="#FFD600"/>
+  <!-- left arm cradling puppy -->
+  <rect x="52" y="148" width="38" height="14" rx="7" fill="#E53935"/>
+  <circle cx="49" cy="152" r="11" fill="#FDBCB4"/>
+  <!-- right arm -->
+  <rect x="152" y="148" width="38" height="14" rx="7" fill="#E53935"/>
+  <circle cx="193" cy="152" r="11" fill="#FDBCB4"/>
+  <!-- puppy on left arm -->
+  <ellipse cx="32" cy="140" rx="20" ry="14" fill="#D2691E"/>
+  <circle cx="24" cy="128" r="14" fill="#D2691E"/>
+  <ellipse cx="17" cy="120" rx="7" ry="9" fill="#8B4513"/>
+  <ellipse cx="31" cy="120" rx="7" ry="9" fill="#8B4513"/>
+  <circle cx="21" cy="128" r="3" fill="#333"/>
+  <circle cx="27" cy="128" r="3" fill="#333"/>
+  <ellipse cx="24" cy="132" rx="4" ry="2.5" fill="#FF8A80"/>
+
+  <rect x="92" y="196" width="22" height="20" rx="8" fill="#E53935"/>
+  <rect x="126" y="196" width="22" height="20" rx="8" fill="#E53935"/>
+  <ellipse cx="103" cy="216" rx="13" ry="6" fill="#212121"/>
+  <ellipse cx="137" cy="216" rx="13" ry="6" fill="#212121"/>
+  <!-- big heart -->
+  <path d="M 195 72 C 195 60 178 55 178 68 C 178 55 161 60 161 72 C 161 84 178 95 178 95 C 178 95 195 84 195 72 Z" fill="#FF5252"/>
+  <!-- small hearts -->
+  <text x="30" y="55" font-size="18" font-family="serif">♥</text>
+  <text x="200" y="50" font-size="14" font-family="serif" fill="#FF5252">♥</text>
+
+</svg>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📖 영웅 이야기 듣기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    height: 100vh; height: 100dvh;
+    background: linear-gradient(160deg, #1A1A4E 0%, #0D0D1A 100%);
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    display: flex; flex-direction: column;
+    overflow: hidden; touch-action: manipulation; color: #fff;
+  }
+
+  /* ── header ── */
+  #header {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  #header a { font-size: 13px; color: #aaa; text-decoration: none;
+    border: 1px solid #555; border-radius: 12px; padding: 3px 10px; }
+  #score-disp { font-size: 16px; font-weight: 900; color: #FFD700; }
+  #round-disp { font-size: 13px; color: #888; }
+
+  #progress-wrap { flex-shrink: 0; height: 6px; background: rgba(255,255,255,0.1); }
+  #progress-fill { height: 100%; background: linear-gradient(90deg, #FFD700, #FF8C00); transition: width 0.4s ease; }
+
+  /* ── main ── */
+  #main {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: space-evenly;
+    padding: 10px 14px; min-height: 0;
+  }
+
+  /* ── listen button ── */
+  #listen-btn {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #FF6B6B, #FF8C00);
+    border: none; border-radius: 50px; padding: 14px 36px;
+    font-size: 22px; font-weight: 900; color: #fff;
+    cursor: pointer; touch-action: manipulation;
+    box-shadow: 0 4px 20px rgba(255,100,50,0.5);
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex; align-items: center; gap: 10px;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  #listen-btn:active { transform: scale(0.93); box-shadow: 0 2px 8px rgba(255,100,50,0.4); }
+  #listen-btn.playing { animation: none; background: linear-gradient(135deg, #42A5F5, #1565C0); }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 4px 20px rgba(255,100,50,0.5); }
+    50%      { box-shadow: 0 4px 32px rgba(255,100,50,0.9), 0 0 0 8px rgba(255,100,50,0.12); }
+  }
+
+  /* ── 4-card grid ── */
+  #choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 380px;
+    flex-shrink: 0;
+  }
+
+  .choice {
+    background: linear-gradient(160deg, #FFF5E0, #FFECD0);
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 0 2px rgba(255,180,60,0.4), 0 6px 20px rgba(0,0,0,0.3);
+    cursor: pointer; touch-action: manipulation;
+    transition: transform 0.1s;
+    position: relative;
+  }
+  .choice::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  }
+  .choice:active { transform: scale(0.93); }
+
+  .choice img {
+    width: 100%; display: block;
+    border-radius: 16px 16px 0 0;
+    pointer-events: none;
+  }
+  .choice-emoji {
+    text-align: center; font-size: 22px; padding: 6px 0 8px;
+    line-height: 1;
+  }
+
+  /* states */
+  .choice.correct {
+    box-shadow: 0 0 0 4px #66BB6A, 0 6px 24px rgba(100,220,100,0.5);
+    animation: correctPop 0.4s ease;
+  }
+  .choice.wrong {
+    box-shadow: 0 0 0 4px #EF5350, 0 6px 24px rgba(239,83,80,0.4);
+    animation: wrongShake 0.35s ease;
+  }
+  .choice.reveal {
+    box-shadow: 0 0 0 3px #FFD700, 0 6px 24px rgba(255,215,0,0.4);
+    opacity: 0.85;
+  }
+  .choice.disabled { pointer-events: none; }
+
+  @keyframes correctPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  @keyframes wrongShake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+
+  /* ── feedback ── */
+  #feedback {
+    flex-shrink: 0; font-size: 22px; font-weight: 900; min-height: 32px; text-align: center;
+  }
+  #feedback.correct { color: #69F0AE; }
+  #feedback.wrong   { color: #FF5252; }
+
+  /* ── sentence reveal bar ── */
+  #sent-bar {
+    flex-shrink: 0; text-align: center; min-height: 28px;
+    font-size: 16px; font-weight: 700; color: #FFD700;
+    letter-spacing: 0.3px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  #sent-bar.show { opacity: 1; }
+
+  /* ── overlay ── */
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88); flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; z-index: 100; text-align: center; padding: 24px;
+  }
+  #overlay.show { display: flex; }
+  #ov-emoji { font-size: 80px; }
+  #ov-msg   { font-size: 26px; font-weight: 900; color: #FFD700; line-height: 1.5; }
+  #ov-sub   { font-size: 15px; color: #FFE0B2; }
+  .ov-btn   { padding: 14px 36px; font-size: 18px; font-weight: 900; border: none;
+    border-radius: 30px; cursor: pointer; touch-action: manipulation; }
+  #ov-next  { background: #FF6B6B; color: #fff; }
+  #ov-home  { background: rgba(255,255,255,0.12); color: #ccc;
+    border: 1px solid rgba(255,255,255,0.2); font-size: 14px; padding: 10px 24px; }
+
+  /* ── stars ── */
+  .star { position: fixed; pointer-events: none; font-size: 24px;
+    animation: starFly 1s ease forwards; z-index: 200; }
+  @keyframes starFly {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(0.3); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <a href="index.html">← 홈</a>
+  <span id="score-disp">⭐ 0점</span>
+  <span id="round-disp">1 / 19</span>
+</div>
+<div id="progress-wrap"><div id="progress-fill" style="width:0%"></div></div>
+
+<div id="main">
+  <button id="listen-btn" onclick="replayTTS()">
+    <span id="listen-icon">🔊</span>
+    <span id="listen-label">다시 듣기</span>
+  </button>
+
+  <div id="choices">
+    <div class="choice" id="c0" onclick="onChoice(0)"><img id="img0" src=""><div class="choice-emoji" id="em0"></div></div>
+    <div class="choice" id="c1" onclick="onChoice(1)"><img id="img1" src=""><div class="choice-emoji" id="em1"></div></div>
+    <div class="choice" id="c2" onclick="onChoice(2)"><img id="img2" src=""><div class="choice-emoji" id="em2"></div></div>
+    <div class="choice" id="c3" onclick="onChoice(3)"><img id="img3" src=""><div class="choice-emoji" id="em3"></div></div>
+  </div>
+
+  <div id="sent-bar"></div>
+  <div id="feedback"></div>
+</div>
+
+<div id="overlay">
+  <div id="ov-emoji">🏆</div>
+  <div id="ov-msg"></div>
+  <div id="ov-sub"></div>
+  <button class="ov-btn" id="ov-next" onclick="startGame()">다시 하기 🔄</button>
+  <button class="ov-btn" id="ov-home" onclick="location.href='index.html'">← 홈으로</button>
+</div>
+
+<script>
+const CARDS = [
+  { img: "01_hello",             emoji: "👋",  en: "Hello, everyone!" },
+  { img: "02_my_name",           emoji: "😊",  en: "My name is Seunghan." },
+  { img: "03_six_years",         emoji: "🎂",  en: "I am six years old." },
+  { img: "04_want_firefighter",  emoji: "💭",  en: "I want to be a firefighter." },
+  { img: "05_brave_firefighter", emoji: "💪",  en: "Firefighters are brave." },
+  { img: "06_help_people",       emoji: "🤝",  en: "They help people." },
+  { img: "07_save_lives",        emoji: "⛑️", en: "And they save lives." },
+  { img: "08_woo_woo",           emoji: "🚒",  en: "Woo woo!" },
+  { img: "09_police",            emoji: "👮",  en: "I also want to be a police officer." },
+  { img: "10_strong",            emoji: "🦾",  en: "Police officers are strong." },
+  { img: "11_catch",             emoji: "🏃",  en: "They catch bad guys." },
+  { img: "12_keep_safe",         emoji: "🔒",  en: "And keep us safe." },
+  { img: "13_doctor_child",      emoji: "👨‍⚕️", en: "I want to be a doctor." },
+  { img: "14_doctors_kind",      emoji: "🤗",  en: "Doctors are kind." },
+  { img: "15_help_sick",         emoji: "💊",  en: "They help sick people." },
+  { img: "16_feel_better",       emoji: "🌟",  en: "And make them feel better." },
+  { img: "17_help_wide",         emoji: "🫶",  en: "I want to help people." },
+  { img: "18_dream",             emoji: "💭",  en: "That is my dream." },
+  { img: "19_thank_you",         emoji: "🙏",  en: "Thank you!" },
+];
+
+let score = 0, qIdx = 0, order = [], answerIdx = -1, answered = false, nextTO = null, autoTTSTO = null;
+
+// ── Audio ─────────────────────────────────────────────────────────────────
+let _ac = null;
+function getAC() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function snd(type) {
+  try {
+    const ctx = getAC(), t = ctx.currentTime;
+    if (type === 'correct') {
+      [880, 659, 784].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = f;
+        const s = t + i * 0.13;
+        g.gain.setValueAtTime(0.35, s); g.gain.exponentialRampToValueAtTime(0.001, s + 0.38);
+        o.start(s); o.stop(s + 0.4);
+      });
+    } else if (type === 'wrong') {
+      [[300,0,0.14],[220,0.17,0.14]].forEach(([f,s,d]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'square'; o.frequency.value = f;
+        const st = t + s;
+        g.gain.setValueAtTime(0.25, st); g.gain.exponentialRampToValueAtTime(0.001, st+d);
+        o.start(st); o.stop(st+d+0.01);
+      });
+    } else if (type === 'win') {
+      [523,659,784,1047,1319].forEach((f,i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=f;
+        const s = t+i*0.1;
+        g.gain.setValueAtTime(0.22,s); g.gain.exponentialRampToValueAtTime(0.001,s+0.3);
+        o.start(s); o.stop(s+0.32);
+      });
+    }
+  } catch(e) {}
+}
+
+function unlockAudio() {
+  try {
+    const ctx = getAC();
+    const buf = ctx.createBuffer(1,1,ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination); src.start(0); ctx.resume();
+    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
+    document.removeEventListener('touchstart', unlockAudio);
+    document.removeEventListener('touchend',   unlockAudio);
+    document.removeEventListener('click',      unlockAudio);
+  } catch(e) {}
+}
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+document.addEventListener('touchend',   unlockAudio, { passive: true });
+document.addEventListener('click',      unlockAudio);
+
+// ── TTS ───────────────────────────────────────────────────────────────────
+if (window.speechSynthesis) speechSynthesis.getVoices();
+function speak(text, onEnd) {
+  if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US'; u.rate = 0.7; u.pitch = 1.1;
+  const vs = speechSynthesis.getVoices();
+  const best = vs.find(v => v.name === 'Samantha') || vs.find(v => v.lang === 'en-US' && v.localService);
+  if (best) u.voice = best;
+  if (onEnd) u.onend = onEnd;
+  speechSynthesis.speak(u);
+}
+
+function replayTTS() {
+  const btn = document.getElementById('listen-btn');
+  btn.classList.add('playing');
+  document.getElementById('listen-icon').textContent = '🎧';
+  document.getElementById('listen-label').textContent = '듣는 중…';
+  speak(order[qIdx].en, () => {
+    btn.classList.remove('playing');
+    document.getElementById('listen-icon').textContent = '🔊';
+    document.getElementById('listen-label').textContent = '다시 듣기';
+  });
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function spawnStars(n = 5) {
+  const E = ['⭐','✨','🌟','💫','🎉'];
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const s = document.createElement('div'); s.className = 'star';
+      s.textContent = E[Math.floor(Math.random()*E.length)];
+      s.style.left = Math.random()*88+4+'vw';
+      s.style.top  = Math.random()*55+20+'vh';
+      document.body.appendChild(s); setTimeout(() => s.remove(), 1100);
+    }, i*80);
+  }
+}
+
+// ── Game ──────────────────────────────────────────────────────────────────
+function startGame() {
+  score = 0; qIdx = 0;
+  order = shuffle([...CARDS]);
+  document.getElementById('score-disp').textContent = '⭐ 0점';
+  document.getElementById('overlay').classList.remove('show');
+  showQuestion();
+}
+
+function showQuestion() {
+  if (nextTO) { clearTimeout(nextTO); nextTO = null; }
+  answered = false;
+
+  const target = order[qIdx];
+  const others = shuffle(CARDS.filter(c => c.img !== target.img)).slice(0, 3);
+  const opts   = shuffle([target, ...others]);
+  answerIdx = opts.findIndex(o => o.img === target.img);
+
+  // progress
+  const pct = (qIdx / CARDS.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('round-disp').textContent = `${qIdx+1} / ${CARDS.length}`;
+
+  // reset UI
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  const sb = document.getElementById('sent-bar');
+  sb.textContent = ''; sb.className = '';
+
+  // cards
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`img${i}`).src = `images/${opts[i].img}.png`;
+    document.getElementById(`em${i}`).textContent = opts[i].emoji;
+    const c = document.getElementById(`c${i}`);
+    c.className = 'choice';
+  }
+
+  // listen button reset
+  const btn = document.getElementById('listen-btn');
+  btn.classList.remove('playing');
+  document.getElementById('listen-icon').textContent = '🔊';
+  document.getElementById('listen-label').textContent = '다시 듣기';
+
+  // auto-play TTS
+  if (autoTTSTO) { clearTimeout(autoTTSTO); autoTTSTO = null; }
+  autoTTSTO = setTimeout(() => { autoTTSTO = null; replayTTS(); }, 400);
+}
+
+function onChoice(i) {
+  if (answered) return;
+  answered = true;
+  if (autoTTSTO) { clearTimeout(autoTTSTO); autoTTSTO = null; }
+  document.querySelectorAll('.choice').forEach(c => c.classList.add('disabled'));
+  speechSynthesis.cancel();
+
+  const btn = document.getElementById('listen-btn');
+  btn.classList.remove('playing');
+  document.getElementById('listen-icon').textContent = '🔊';
+  document.getElementById('listen-label').textContent = '다시 듣기';
+
+  const target = order[qIdx];
+  const sb = document.getElementById('sent-bar');
+  sb.textContent = target.en; sb.classList.add('show');
+
+  if (i === answerIdx) {
+    document.getElementById(`c${i}`).classList.add('correct');
+    snd('correct');
+    speak(target.en);
+    score++;
+    document.getElementById('score-disp').textContent = `⭐ ${score}점`;
+    document.getElementById('feedback').textContent = '정답! 🎉';
+    document.getElementById('feedback').className = 'correct';
+    spawnStars(4);
+  } else {
+    document.getElementById(`c${i}`).classList.add('wrong');
+    document.getElementById(`c${answerIdx}`).classList.add('reveal');
+    snd('wrong');
+    document.getElementById('feedback').textContent = '다시 들어볼까요? 👂';
+    document.getElementById('feedback').className = 'wrong';
+  }
+
+  qIdx++;
+  const isLast = qIdx >= CARDS.length;
+  nextTO = setTimeout(() => {
+    if (isLast) showFinal();
+    else showQuestion();
+  }, 1600);
+}
+
+function showFinal() {
+  const pct = Math.round(score / CARDS.length * 100);
+  const praise = score===CARDS.length ? '완벽해요! 🏆' : score>=15 ? '정말 잘했어요! 🌟' : score>=10 ? '잘했어요! 👍' : '다시 해볼까요! 💪';
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('ov-emoji').textContent = score===CARDS.length ? '🎊' : '🦸';
+  document.getElementById('ov-msg').textContent = `${score} / ${CARDS.length}점\n${praise}`;
+  document.getElementById('ov-sub').textContent  = `정답률 ${pct}%`;
+  const btn = document.getElementById('ov-next');
+  btn.textContent = '다시 하기 🔄'; btn.onclick = () => startGame();
+  if (score === CARDS.length) snd('win');
+  document.getElementById('overlay').classList.add('show');
+}
+
+window.addEventListener('load', startGame);
+</script>
+</body>
+</html>

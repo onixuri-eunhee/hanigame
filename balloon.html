@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎈 풍선 터뜨리기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    height: 100vh; height: 100dvh;
+    background: linear-gradient(180deg, #87CEEB 0%, #E0F4FF 60%, #B0E0FF 100%);
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    overflow: hidden; display: flex; flex-direction: column;
+    touch-action: manipulation;
+  }
+
+  #header {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(6px); border-bottom: 2px solid rgba(255,255,255,0.9);
+  }
+  #header a { font-size: 13px; color: #555; text-decoration: none;
+    border: 1.5px solid #aaa; border-radius: 12px; padding: 3px 10px; background: #fff; }
+  #score-disp { font-size: 16px; font-weight: 900; color: #FF6B6B; }
+  #round-disp { font-size: 13px; color: #888; }
+
+  #target-box {
+    flex-shrink: 0; text-align: center; padding: 10px 8px 6px;
+    background: rgba(255,255,255,0.6);
+  }
+  #target-label { font-size: 12px; color: #888; margin-bottom: 2px; }
+  #target-word  { font-size: 22px; font-weight: 900; color: #333; letter-spacing: 1px; }
+
+  #arena { flex: 1; position: relative; overflow: hidden; }
+
+  .cloud {
+    position: absolute; background: rgba(255,255,255,0.8);
+    border-radius: 50px; pointer-events: none;
+  }
+
+  .balloon {
+    position: absolute;
+    width: 120px; height: 148px;
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; touch-action: manipulation;
+    transition: transform 0.08s;
+  }
+  .balloon:active { transform: scale(0.9); }
+  .balloon-body {
+    width: 110px; height: 118px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px;
+    box-shadow: inset -8px -8px 16px rgba(0,0,0,0.15), 0 4px 14px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .balloon-img {
+    width: 68px; height: 68px; border-radius: 50%;
+    object-fit: cover; pointer-events: none; flex-shrink: 0;
+  }
+  .balloon-body::before {
+    content: '';
+    position: absolute; top: 14px; left: 16px;
+    width: 22px; height: 14px;
+    background: rgba(255,255,255,0.45);
+    border-radius: 50%;
+    transform: rotate(-30deg);
+  }
+  .balloon-knot {
+    width: 10px; height: 14px;
+    background: inherit;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    filter: brightness(0.8);
+  }
+  .balloon-word {
+    font-size: 12px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    text-align: center; padding: 0 6px;
+    word-break: normal; overflow-wrap: break-word;
+    line-height: 1.2; max-width: 102px;
+    pointer-events: none;
+  }
+  .balloon-string {
+    width: 1px; height: 30px;
+    background: rgba(0,0,0,0.25);
+    margin-top: 2px;
+  }
+
+  @keyframes floatUp {
+    from { transform: translateY(0) rotate(0deg); }
+    25%  { transform: translateY(-25vh) rotate(2deg); }
+    50%  { transform: translateY(-50vh) rotate(-2deg); }
+    75%  { transform: translateY(-75vh) rotate(1.5deg); }
+    to   { transform: translateY(-110vh) rotate(0deg); }
+  }
+  .balloon.flying { animation: floatUp var(--dur, 5s) linear forwards; }
+
+  @keyframes popAnim {
+    0%   { transform: scale(1); opacity: 1; }
+    30%  { transform: scale(1.6); opacity: 0.8; }
+    100% { transform: scale(0.1); opacity: 0; }
+  }
+  .balloon.popped { animation: popAnim 0.35s ease forwards; pointer-events: none; }
+
+  @keyframes wrongShake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+  }
+  .balloon.wrong-shake { animation: wrongShake 0.35s ease; }
+
+  /* Confetti */
+  .confetti {
+    position: fixed; pointer-events: none;
+    width: 10px; height: 10px; border-radius: 2px;
+    animation: confettiFall var(--cf-dur, 1.2s) ease forwards;
+    z-index: 50;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(140px) rotate(540deg) scale(0.4); opacity: 0; }
+  }
+
+  /* Overlays */
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; z-index: 100; text-align: center; padding: 24px;
+  }
+  #overlay.show { display: flex; }
+  #overlay-emoji { font-size: 72px; }
+  #overlay-msg  { font-size: 26px; font-weight: 900; color: #FFD166; line-height: 1.4; }
+  #overlay-sub  { font-size: 15px; color: #FFE0B2; }
+  .ov-btn {
+    padding: 14px 36px; font-size: 18px; font-weight: 900;
+    border: none; border-radius: 30px; cursor: pointer; touch-action: manipulation;
+  }
+  #ov-next { background: #FF6B6B; color: #fff; }
+  #ov-home { background: rgba(255,255,255,0.15); color: #ddd;
+    border: 1.5px solid rgba(255,255,255,0.3); font-size: 14px; padding: 10px 24px; }
+
+  #miss-flash {
+    position: fixed; inset: 0; background: rgba(255,0,0,0.25);
+    pointer-events: none; z-index: 80; opacity: 0;
+    transition: opacity 0.15s;
+  }
+  #miss-flash.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <a href="index.html">← 홈</a>
+  <span id="score-disp">⭐ 0점</span>
+  <span id="round-disp">1 / 12</span>
+</div>
+
+<div id="target-box">
+  <div id="target-label">이 단어의 풍선을 터뜨려요!</div>
+  <div id="target-word">-</div>
+</div>
+
+<div id="arena"></div>
+
+<div id="miss-flash"></div>
+
+<div id="overlay">
+  <div id="overlay-emoji">🎈</div>
+  <div id="overlay-msg"></div>
+  <div id="overlay-sub"></div>
+  <button class="ov-btn" id="ov-next" onclick="nextRound()">다음 ▶</button>
+  <button class="ov-btn" id="ov-home" onclick="location.href='index.html'">← 홈으로</button>
+</div>
+
+<script>
+const WORDS = [
+  { word: 'firefighter',   emoji: '🚒', color: '#FF5252', img: '08_woo_woo' },
+  { word: 'police officer',emoji: '👮', color: '#1565C0', img: '09_police' },
+  { word: 'doctor',        emoji: '👨‍⚕️', color: '#43A047', img: '13_doctor_child' },
+  { word: 'brave',         emoji: '💪', color: '#FF9800', img: '05_brave_firefighter' },
+  { word: 'strong',        emoji: '🦾', color: '#7B1FA2', img: '10_strong' },
+  { word: 'kind',          emoji: '🤗', color: '#E91E63', img: '14_doctors_kind' },
+  { word: 'dream',         emoji: '💭', color: '#5C6BC0', img: '18_dream' },
+  { word: 'hero',          emoji: '🦸', color: '#FF7043', img: '17_help_wide' },
+  { word: 'help',          emoji: '🤝', color: '#00897B', img: '06_help_people' },
+  { word: 'save',          emoji: '⛑️', color: '#F4511E', img: '07_save_lives' },
+  { word: 'safe',          emoji: '🔒', color: '#039BE5', img: '12_keep_safe' },
+  { word: 'thank you',     emoji: '🙏', color: '#8D6E63', img: '19_thank_you' },
+];
+
+const BALLOON_COLORS = ['#FF5252','#FF9800','#4CAF50','#2196F3','#9C27B0','#FF4081','#00BCD4','#FF6B00'];
+
+let score = 0, round = 0, busy = false;
+let order = [];
+let missTimeout = null;
+
+// ── Audio ─────────────────────────────────────────────────────────────
+let _ac = null;
+function getAC() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function snd(type) {
+  try {
+    const ctx = getAC(), t = ctx.currentTime;
+    if (type === 'pop') {
+      [880, 659, 784].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = f;
+        const s = t + i * 0.13;
+        g.gain.setValueAtTime(0.35, s); g.gain.exponentialRampToValueAtTime(0.001, s + 0.38);
+        o.start(s); o.stop(s + 0.4);
+      });
+    } else if (type === 'wrong') {
+      [[300, 0, 0.14], [220, 0.17, 0.14]].forEach(([f, s, d]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'square'; o.frequency.value = f;
+        const st = t + s;
+        g.gain.setValueAtTime(0.25, st); g.gain.exponentialRampToValueAtTime(0.001, st + d);
+        o.start(st); o.stop(st + d + 0.01);
+      });
+    } else if (type === 'win') {
+      [523, 659, 784, 1047, 1319].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type = 'sine'; o.frequency.value = f;
+        const s = t + i * 0.1;
+        g.gain.setValueAtTime(0.22, s); g.gain.exponentialRampToValueAtTime(0.001, s + 0.3);
+        o.start(s); o.stop(s + 0.32);
+      });
+    }
+  } catch(e) {}
+}
+
+function _unlockAudio() {
+  try {
+    const ctx = getAC();
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination); src.start(0);
+    ctx.resume();
+    document.removeEventListener('touchstart', _unlockAudio);
+    document.removeEventListener('touchend',   _unlockAudio);
+    document.removeEventListener('click',      _unlockAudio);
+  } catch(e) {}
+}
+document.addEventListener('touchstart', _unlockAudio, { passive: true });
+document.addEventListener('touchend',   _unlockAudio, { passive: true });
+document.addEventListener('click',      _unlockAudio);
+
+// ── TTS ───────────────────────────────────────────────────────────────
+if (window.speechSynthesis) speechSynthesis.getVoices();
+function speak(word) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
+  const vs = speechSynthesis.getVoices();
+  const best = vs.find(v => v.name === 'Samantha') || vs.find(v => v.lang === 'en-US' && v.localService);
+  if (best) u.voice = best;
+  speechSynthesis.speak(u);
+}
+
+// ── Shuffle ────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────
+function spawnConfetti(x, y) {
+  const colors = ['#FF5252','#FFD700','#4CAF50','#2196F3','#E91E63','#FF9800'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.cssText = `
+      left:${x + (Math.random()-0.5)*80}px;
+      top:${y}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      --cf-dur:${0.8 + Math.random()*0.6}s;
+      transform:rotate(${Math.random()*360}deg);
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+  }
+}
+
+// ── Clouds ────────────────────────────────────────────────────────────
+function addClouds() {
+  const arena = document.getElementById('arena');
+  const H = arena.clientHeight;
+  for (let i = 0; i < 4; i++) {
+    const c = document.createElement('div');
+    c.className = 'cloud';
+    const w = 80 + Math.random()*60;
+    c.style.cssText = `width:${w}px;height:${w*0.55}px;
+      left:${Math.random()*90}%;top:${10+Math.random()*60}%;opacity:0.7;`;
+    arena.appendChild(c);
+  }
+}
+
+// ── Build round ───────────────────────────────────────────────────────
+function startGame() {
+  score = 0; round = 0;
+  order = shuffle([...WORDS]);
+  document.getElementById('score-disp').textContent = '⭐ 0점';
+  addClouds();
+  startRound();
+}
+
+function startRound() {
+  busy = false;
+  if (missTimeout) { clearTimeout(missTimeout); missTimeout = null; }
+
+  const arena = document.getElementById('arena');
+  arena.querySelectorAll('.balloon').forEach(b => b.remove());
+
+  const target = order[round];
+  document.getElementById('target-word').textContent = target.emoji + ' ' + target.word;
+  document.getElementById('round-disp').textContent = `${round+1} / ${WORDS.length}`;
+  document.getElementById('overlay').classList.remove('show');
+
+  // 4 options: target + 3 random others
+  const others = shuffle(WORDS.filter(w => w.word !== target.word)).slice(0, 3);
+  const options = shuffle([target, ...others]);
+
+  const W = arena.clientWidth;
+  const H = arena.clientHeight;
+
+  options.forEach((item, i) => {
+    const col = Math.floor(Math.random()*BALLOON_COLORS.length);
+    const bColor = BALLOON_COLORS[col];
+    const balloon = document.createElement('div');
+    balloon.className = 'balloon';
+    const startX = (W / 4) * i + (W/8) - 45 + (Math.random()-0.5)*20;
+    const startY = H + 10;
+    const dur = 4.5 + Math.random()*2;
+    balloon.style.cssText = `left:${startX}px; top:${startY}px; --dur:${dur}s;`;
+    balloon.innerHTML = `
+      <div class="balloon-body" style="background:${bColor}">
+        <img class="balloon-img" src="images/${item.img}.png" alt="${item.word}">
+        <div class="balloon-word">${item.word}</div>
+      </div>
+      <div class="balloon-knot" style="background:${bColor}"></div>
+      <div class="balloon-string"></div>`;
+    balloon.dataset.word = item.word;
+    balloon.dataset.isTarget = item.word === target.word ? '1' : '0';
+    balloon.addEventListener('click', () => onBalloonTap(balloon, target));
+    balloon.addEventListener('touchstart', e => { e.preventDefault(); onBalloonTap(balloon, target); }, { passive: false });
+    arena.appendChild(balloon);
+
+    // start floating after short stagger
+    setTimeout(() => balloon.classList.add('flying'), i * 280);
+  });
+
+  // speak target after 600ms
+  setTimeout(() => speak(target.word), 600);
+
+  // miss if all escape
+  missTimeout = setTimeout(() => {
+    if (!busy) onMiss(target);
+  }, ((options.length - 1) * 0.28 + 6.5 + 0.4) * 1000);
+}
+
+function onBalloonTap(balloon, target) {
+  if (busy) return;
+  if (balloon.dataset.isTarget === '1') {
+    busy = true;
+    snd('pop');
+    const rect = balloon.getBoundingClientRect();
+    spawnConfetti(rect.left + rect.width/2, rect.top + rect.height/2);
+    balloon.classList.add('popped');
+    score++;
+    document.getElementById('score-disp').textContent = `⭐ ${score}점`;
+    speak(target.word);
+    setTimeout(() => showRoundResult(true, target), 500);
+  } else {
+    snd('wrong');
+    balloon.classList.remove('wrong-shake');
+    void balloon.offsetWidth;
+    balloon.classList.add('wrong-shake');
+    // flash red
+    const flash = document.getElementById('miss-flash');
+    flash.classList.add('show');
+    setTimeout(() => flash.classList.remove('show'), 200);
+  }
+}
+
+function onMiss(target) {
+  busy = true;
+  snd('wrong');
+  const flash = document.getElementById('miss-flash');
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 300);
+  showRoundResult(false, target);
+}
+
+function showRoundResult(correct, target) {
+  if (missTimeout) { clearTimeout(missTimeout); missTimeout = null; }
+  const ov = document.getElementById('overlay');
+  const isLast = round + 1 >= WORDS.length;
+
+  document.getElementById('overlay-emoji').textContent = correct ? '🎉' : '😅';
+  document.getElementById('overlay-msg').textContent   = correct
+    ? `정답! ${target.emoji}\n${target.word}`
+    : `놓쳤어요!\n${target.emoji} ${target.word}`;
+  document.getElementById('overlay-sub').textContent   = correct
+    ? `+1점! 현재 ${score}점`
+    : `아쉬워요, 다음엔 빠르게!`;
+
+  const nextBtn = document.getElementById('ov-next');
+  if (isLast) {
+    nextBtn.textContent = '결과 보기 🏆';
+  } else {
+    nextBtn.textContent = '다음 풍선 ▶';
+  }
+  ov.classList.add('show');
+}
+
+function nextRound() {
+  round++;
+  if (round >= WORDS.length) {
+    showFinal();
+  } else {
+    startRound();
+  }
+}
+
+function showFinal() {
+  const ov = document.getElementById('overlay');
+  const pct = Math.round(score / WORDS.length * 100);
+  const praise = score === WORDS.length ? '완벽해요! 🏆' : score >= 9 ? '정말 잘했어요! 🌟' : score >= 6 ? '잘했어요! 👍' : '다시 해볼까요? 💪';
+  document.getElementById('overlay-emoji').textContent = score === WORDS.length ? '🎊' : '🎈';
+  document.getElementById('overlay-msg').textContent   = `${score} / ${WORDS.length}점\n${praise}`;
+  document.getElementById('overlay-sub').textContent   = `정답률 ${pct}%`;
+  const nextBtn = document.getElementById('ov-next');
+  nextBtn.textContent = '다시 하기 🔄';
+  nextBtn.onclick = () => startGame();
+  if (score === WORDS.length) snd('win');
+  ov.classList.add('show');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+window.addEventListener('load', startGame);
+</script>
+</body>
+</html>
