@@ -194,25 +194,25 @@
 
 <script>
 const CARDS = [
-  { img: "01_hello",             emoji: "👋",  en: "Hello, everyone!" },
-  { img: "02_my_name",           emoji: "😊",  en: "My name is Seunghan." },
-  { img: "03_six_years",         emoji: "🎂",  en: "I am six years old." },
-  { img: "04_want_firefighter",  emoji: "💭",  en: "I want to be a firefighter." },
-  { img: "05_brave_firefighter", emoji: "💪",  en: "Firefighters are brave." },
-  { img: "06_help_people",       emoji: "🤝",  en: "They help people." },
-  { img: "07_save_lives",        emoji: "⛑️", en: "And they save lives." },
-  { img: "08_woo_woo",           emoji: "🚒",  en: "Woo woo!" },
-  { img: "09_police",            emoji: "👮",  en: "I also want to be a police officer." },
-  { img: "10_strong",            emoji: "🦾",  en: "Police officers are strong." },
-  { img: "11_catch",             emoji: "🏃",  en: "They catch bad guys." },
-  { img: "12_keep_safe",         emoji: "🔒",  en: "And keep us safe." },
-  { img: "13_doctor_child",      emoji: "👨‍⚕️", en: "I want to be a doctor." },
-  { img: "14_doctors_kind",      emoji: "🤗",  en: "Doctors are kind." },
-  { img: "15_help_sick",         emoji: "💊",  en: "They help sick people." },
-  { img: "16_feel_better",       emoji: "🌟",  en: "And make them feel better." },
-  { img: "17_help_wide",         emoji: "🫶",  en: "I want to help people." },
-  { img: "18_dream",             emoji: "💭",  en: "That is my dream." },
-  { img: "19_thank_you",         emoji: "🙏",  en: "Thank you!" },
+  { img: "01_hello",             cat: "general", emoji: "👋",  en: "Hello, everyone!" },
+  { img: "02_my_name",           cat: "general", emoji: "😊",  en: "My name is Seunghan." },
+  { img: "03_six_years",         cat: "general", emoji: "🎂",  en: "I am six years old." },
+  { img: "04_want_firefighter",  cat: "fire",    emoji: "💭",  en: "I want to be a firefighter." },
+  { img: "05_brave_firefighter", cat: "fire",    emoji: "💪",  en: "Firefighters are brave." },
+  { img: "06_help_people",       cat: "fire",    emoji: "🤝",  en: "They help people." },
+  { img: "07_save_lives",        cat: "fire",    emoji: "⛑️", en: "And they save lives." },
+  { img: "08_woo_woo",           cat: "fire",    emoji: "🚒",  en: "Woo woo!" },
+  { img: "09_police",            cat: "police",  emoji: "👮",  en: "I also want to be a police officer." },
+  { img: "10_strong",            cat: "police",  emoji: "🦾",  en: "Police officers are strong." },
+  { img: "11_catch",             cat: "police",  emoji: "🏃",  en: "They catch bad guys." },
+  { img: "12_keep_safe",         cat: "police",  emoji: "🔒",  en: "And keep us safe." },
+  { img: "13_doctor_child",      cat: "doctor",  emoji: "👨‍⚕️", en: "I want to be a doctor." },
+  { img: "14_doctors_kind",      cat: "doctor",  emoji: "🤗",  en: "Doctors are kind." },
+  { img: "15_help_sick",         cat: "doctor",  emoji: "💊",  en: "They help sick people." },
+  { img: "16_feel_better",       cat: "doctor",  emoji: "🌟",  en: "And make them feel better." },
+  { img: "17_help_wide",         cat: "general", emoji: "🫶",  en: "I want to help people." },
+  { img: "18_dream",             cat: "general", emoji: "💭",  en: "That is my dream." },
+  { img: "19_thank_you",         cat: "general", emoji: "🙏",  en: "Thank you!" },
 ];
 
 let score = 0, qIdx = 0, order = [], answerIdx = -1, answered = false, nextTO = null, autoTTSTO = null;
@@ -334,8 +334,11 @@ function showQuestion() {
   answered = false;
 
   const target = order[qIdx];
-  const others = shuffle(CARDS.filter(c => c.img !== target.img)).slice(0, 3);
-  const opts   = shuffle([target, ...others]);
+  // Pick distractors from different categories first to avoid visual confusion
+  const diffCat = shuffle(CARDS.filter(c => c.img !== target.img && c.cat !== target.cat));
+  const sameCat = shuffle(CARDS.filter(c => c.img !== target.img && c.cat === target.cat));
+  const others  = [...diffCat, ...sameCat].slice(0, 3);
+  const opts    = shuffle([target, ...others]);
   answerIdx = opts.findIndex(o => o.img === target.img);
 
   // progress
