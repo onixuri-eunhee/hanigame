@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FF8C00"/>
+    <stop offset="100%" stop-color="#FF5722"/>
+  </linearGradient></defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <ellipse cx="120" cy="228" rx="52" ry="9" fill="rgba(0,0,0,0.10)"/>
+
+  <!-- flames background -->
+  <path d="M 20 240 C 10 210 25 195 15 175 C 20 190 30 183 25 162 C 32 178 38 172 33 192 C 40 182 42 196 38 210 Z" fill="#FF6D00" opacity="0.8"/>
+  <path d="M 22 240 C 16 215 26 203 20 185 C 24 197 30 192 26 172 Z" fill="#FFD600" opacity="0.6"/>
+  <path d="M 210 240 C 200 210 215 195 205 175 C 210 190 220 183 215 162 C 222 178 228 172 223 192 C 230 182 232 196 228 210 Z" fill="#FF6D00" opacity="0.8"/>
+  <path d="M 212 240 C 206 215 216 203 210 185 C 214 197 220 192 216 172 Z" fill="#FFD600" opacity="0.6"/>
+
+  <circle cx="120" cy="72" r="40" fill="#FDBCB4"/>
+  <ellipse cx="120" cy="52" rx="36" ry="22" fill="#2C1A0E"/>
+  <circle cx="80" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="160" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="107" cy="74" r="8" fill="white"/>
+  <circle cx="133" cy="74" r="8" fill="white"/>
+  <circle cx="108" cy="75" r="5" fill="#222"/>
+  <circle cx="134" cy="75" r="5" fill="#222"/>
+  <circle cx="108" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="134" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="108" cy="75" r="1.5" fill="#111"/>
+  <circle cx="134" cy="75" r="1.5" fill="#111"/>
+  <circle cx="110" cy="73" r="1.3" fill="white"/>
+  <circle cx="136" cy="73" r="1.3" fill="white"/>
+  <ellipse cx="120" cy="84" rx="3.5" ry="2.5" fill="#F08070"/>
+  <path d="M 107 89 Q 120 100 133 89" stroke="#C1440E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="101" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <circle cx="139" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <!-- fire helmet -->
+  <path d="M 78 74 Q 78 34 120 32 Q 162 34 162 74 Z" fill="#E53935"/>
+  <rect x="72" y="70" width="96" height="12" rx="6" fill="#C62828"/>
+  <circle cx="120" cy="54" r="10" fill="#FFD600"/>
+  <text x="120" y="59" text-anchor="middle" font-size="10" font-weight="900" fill="#B71C1C" font-family="Arial">1</text>
+  <!-- body red uniform -->
+  <rect x="87" y="148" width="66" height="52" rx="13" fill="#E53935"/>
+  <!-- yellow reflective stripe -->
+  <rect x="87" y="172" width="66" height="9" rx="4" fill="#FFD600"/>
+  <!-- left arm raised fist -->
+  <rect x="54" y="125" width="14" height="32" rx="7" fill="#E53935"/>
+  <circle cx="60" cy="120" r="11" fill="#FDBCB4"/>
+  <!-- right arm fist -->
+  <rect x="173" y="125" width="14" height="32" rx="7" fill="#E53935"/>
+  <circle cx="179" cy="120" r="11" fill="#FDBCB4"/>
+
+  <rect x="92" y="196" width="22" height="20" rx="8" fill="#E53935"/>
+  <rect x="126" y="196" width="22" height="20" rx="8" fill="#E53935"/>
+  <ellipse cx="103" cy="216" rx="13" ry="6" fill="#212121"/>
+  <ellipse cx="137" cy="216" rx="13" ry="6" fill="#212121"/>
+  <!-- star sparkles -->
+  <polygon points="42,45 44,52 51,52 45.5,56 47.5,63 42,59 36.5,63 38.5,56 33,52 40,52" fill="#FFD600" opacity="0.9"/>
+  <polygon points="198,30 199.5,36 206,36 201,39.5 203,46 198,42.5 193,46 195,39.5 190,36 196.5,36" fill="white" opacity="0.8"/>
+
+</svg>

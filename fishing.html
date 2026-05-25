@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎣 단어 낚시</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    height: 100vh; height: 100dvh;
+    background: linear-gradient(180deg, #87CEEB 0%, #4FC3F7 30%, #0277BD 100%);
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    overflow: hidden; display: flex; flex-direction: column;
+    touch-action: manipulation;
+  }
+
+  #header {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(6px); border-bottom: 2px solid rgba(255,255,255,0.9);
+  }
+  #header a { font-size: 13px; color: #555; text-decoration: none;
+    border: 1.5px solid #aaa; border-radius: 12px; padding: 3px 10px; background:#fff; }
+  #score-disp { font-size: 16px; font-weight: 900; color: #0277BD; }
+  #round-disp { font-size: 13px; color: #888; }
+
+  #target-area {
+    flex-shrink: 0; text-align: center;
+    padding: 8px 12px 6px;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(4px);
+  }
+  #target-label { font-size: 12px; color: #888; }
+  #target-word  { font-size: 22px; font-weight: 900; color: #0D47A1; letter-spacing: 1px; }
+
+  #timer-bar-wrap { height: 6px; background: rgba(0,0,0,0.1); flex-shrink: 0; }
+  #timer-bar { height: 100%; background: linear-gradient(90deg, #43A047, #FFD700, #FF5722);
+    transition: width 0.1s linear; }
+
+  #ocean {
+    flex: 1; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #29B6F6 0%, #0288D1 50%, #01579B 100%);
+  }
+
+  /* Waves */
+  .wave {
+    position: absolute; bottom: 0; left: -100%;
+    width: 300%; height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    animation: waveMove linear infinite;
+    pointer-events: none;
+  }
+  .wave:nth-child(1) { animation-duration: 6s; bottom: 5px; }
+  .wave:nth-child(2) { animation-duration: 9s; bottom: 0; opacity: 0.6; }
+  @keyframes waveMove { from{transform:translateX(0)} to{transform:translateX(33.33%)} }
+
+  /* Bubbles */
+  .bubble {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    animation: bubbleRise linear infinite;
+    pointer-events: none;
+  }
+  @keyframes bubbleRise {
+    from { transform: translateY(0) scale(1); opacity: 0.5; }
+    to   { transform: translateY(-100px) scale(1.4); opacity: 0; }
+  }
+
+  /* Fish */
+  .fish {
+    position: absolute;
+    display: flex; align-items: center;
+    cursor: pointer; touch-action: manipulation;
+    user-select: none;
+    transition: filter 0.15s;
+  }
+  .fish:active { filter: brightness(1.3); }
+  .fish-body {
+    background: linear-gradient(135deg, var(--fc1, #FF8F00), var(--fc2, #FFB300));
+    border-radius: 50% 60% 60% 50%;
+    display: flex; align-items: center; flex-direction: row;
+    gap: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    position: relative;
+    padding: 18px 28px 18px 18px;
+    min-width: 225px;
+  }
+  .fish-body::after {
+    content: ''; position: absolute;
+    right: -35px; top: 50%; transform: translateY(-50%);
+    border-left: 45px solid var(--fc2, #FFB300);
+    border-top: 30px solid transparent;
+    border-bottom: 30px solid transparent;
+  }
+  .fish-img {
+    flex-shrink: 0;
+    width: 62px; height: 62px; border-radius: 10px;
+    object-fit: cover; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .fish-word { font-size: 22px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4); text-align: center;
+    word-break: keep-all; overflow-wrap: break-word; line-height: 1.25; flex: 1; }
+
+  @keyframes catchAnim {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.5) rotate(10deg); }
+    100% { transform: scale(0) rotate(30deg); opacity: 0; }
+  }
+  .fish.caught { animation: catchAnim 0.4s ease forwards; pointer-events: none; }
+
+  @keyframes missAnim {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+  .fish.miss-shake { animation: missAnim 0.35s ease; }
+
+  /* Splash */
+  .splash {
+    position: fixed; pointer-events: none; z-index: 50;
+    font-size: 28px;
+    animation: splashFly 0.7s ease forwards;
+  }
+  @keyframes splashFly {
+    0%   { transform: scale(0.5) translateY(0); opacity: 1; }
+    100% { transform: scale(1.5) translateY(-60px); opacity: 0; }
+  }
+
+  /* Flash */
+  #catch-flash {
+    position: fixed; inset: 0; pointer-events: none;
+    z-index: 80; opacity: 0; transition: opacity 0.1s;
+  }
+  #catch-flash.good { background: rgba(100,255,150,0.3); opacity: 1; }
+  #catch-flash.bad  { background: rgba(255,50,50,0.3);  opacity: 1; }
+
+  /* Overlay */
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 100; text-align: center; padding: 24px;
+  }
+  #overlay.show { display: flex; }
+  #ov-emoji { font-size: 72px; }
+  #ov-msg   { font-size: 26px; font-weight: 900; color: #FFD166; line-height: 1.5; }
+  #ov-sub   { font-size: 15px; color: #FFE0B2; }
+  .ov-btn   { padding: 14px 36px; font-size: 18px; font-weight: 900; border: none;
+    border-radius: 30px; cursor: pointer; touch-action: manipulation; }
+  #ov-next  { background: #0288D1; color: #fff; }
+  #ov-home  { background: rgba(255,255,255,0.12); color: #ddd;
+    border: 1px solid rgba(255,255,255,0.2); font-size: 14px; padding: 10px 24px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <a href="index.html">← 홈</a>
+  <span id="score-disp">🐟 0점</span>
+  <span id="round-disp">1 / 12</span>
+</div>
+
+<div id="target-area">
+  <div id="target-label">이 단어 물고기를 잡아요! 빠르게!</div>
+  <div id="target-word">-</div>
+</div>
+<div id="timer-bar-wrap"><div id="timer-bar" style="width:100%"></div></div>
+
+<div id="ocean">
+  <div class="wave"></div>
+  <div class="wave"></div>
+</div>
+
+<div id="catch-flash"></div>
+
+<div id="overlay">
+  <div id="ov-emoji">🎣</div>
+  <div id="ov-msg"></div>
+  <div id="ov-sub"></div>
+  <button class="ov-btn" id="ov-next" onclick="nextRound()">다음 ▶</button>
+  <button class="ov-btn" id="ov-home" onclick="location.href='index.html'">← 홈으로</button>
+</div>
+
+<script>
+const WORDS = [
+  { word: 'firefighter',   emoji: '🚒', img: '08_woo_woo' },
+  { word: 'police officer',emoji: '👮', img: '09_police' },
+  { word: 'doctor',        emoji: '👨‍⚕️', img: '13_doctor_child' },
+  { word: 'brave',         emoji: '💪', img: '05_brave_firefighter' },
+  { word: 'strong',        emoji: '🦾', img: '10_strong' },
+  { word: 'kind',          emoji: '🤗', img: '14_doctors_kind' },
+  { word: 'dream',         emoji: '💭', img: '18_dream' },
+  { word: 'hero',          emoji: '🦸', img: '17_help_wide' },
+  { word: 'help',          emoji: '🤝', img: '06_help_people' },
+  { word: 'save',          emoji: '⛑️', img: '07_save_lives' },
+  { word: 'safe',          emoji: '🔒', img: '12_keep_safe' },
+  { word: 'thank you',     emoji: '🙏', img: '19_thank_you' },
+];
+
+const FISH_COLORS = [
+  ['#FF8F00','#FFB300'],['#E53935','#EF5350'],['#7B1FA2','#AB47BC'],
+  ['#1565C0','#42A5F5'],['#2E7D32','#66BB6A'],['#FF6F00','#FFA726'],
+];
+
+const TIME_LIMIT = 8000; // ms per round
+let score = 0, round = 0, order = [], busy = false;
+let timerStart = 0, timerRAF = null, roundTO = null;
+let fishEls = [];
+
+// ── Audio ──────────────────────────────────────────────────────────────
+let _ac = null;
+function getAC() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function snd(type) {
+  try {
+    const ctx = getAC(), t = ctx.currentTime;
+    if (type === 'catch') {
+      [880,659,784].forEach((f,i) => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=f;
+        const s=t+i*0.13;
+        g.gain.setValueAtTime(0.35,s); g.gain.exponentialRampToValueAtTime(0.001,s+0.38);
+        o.start(s); o.stop(s+0.4);
+      });
+    } else if (type === 'wrong') {
+      [[300,0,0.14],[220,0.17,0.14]].forEach(([f,s,d]) => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type='square'; o.frequency.value=f;
+        const st=t+s;
+        g.gain.setValueAtTime(0.25,st); g.gain.exponentialRampToValueAtTime(0.001,st+d);
+        o.start(st); o.stop(st+d+0.01);
+      });
+    } else if (type === 'miss') {
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.type='sine';
+      o.frequency.setValueAtTime(400,t); o.frequency.exponentialRampToValueAtTime(200,t+0.3);
+      g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+      o.start(t); o.stop(t+0.32);
+    } else if (type === 'win') {
+      [523,659,784,1047,1319].forEach((f,i) => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.value=f;
+        const s=t+i*0.1;
+        g.gain.setValueAtTime(0.22,s); g.gain.exponentialRampToValueAtTime(0.001,s+0.3);
+        o.start(s); o.stop(s+0.32);
+      });
+    }
+  } catch(e) {}
+}
+
+function _unlockAudio() {
+  try {
+    const ctx=getAC();
+    const buf=ctx.createBuffer(1,1,ctx.sampleRate);
+    const src=ctx.createBufferSource();
+    src.buffer=buf; src.connect(ctx.destination); src.start(0);
+    ctx.resume();
+    document.removeEventListener('touchstart',_unlockAudio);
+    document.removeEventListener('touchend',  _unlockAudio);
+    document.removeEventListener('click',     _unlockAudio);
+  } catch(e) {}
+}
+document.addEventListener('touchstart',_unlockAudio,{passive:true});
+document.addEventListener('touchend',  _unlockAudio,{passive:true});
+document.addEventListener('click',     _unlockAudio);
+
+// ── TTS ───────────────────────────────────────────────────────────────
+if (window.speechSynthesis) speechSynthesis.getVoices();
+function speak(word) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang='en-US'; u.rate=0.75; u.pitch=1.2;
+  const vs=speechSynthesis.getVoices();
+  const best=vs.find(v=>v.name==='Samantha')||vs.find(v=>v.lang==='en-US'&&v.localService);
+  if (best) u.voice=best;
+  speechSynthesis.speak(u);
+}
+
+function shuffle(arr) {
+  const a=[...arr];
+  for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── Bubbles ────────────────────────────────────────────────────────────
+function addBubbles() {
+  const ocean = document.getElementById('ocean');
+  for (let i = 0; i < 8; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const sz = 4 + Math.random()*8;
+    b.style.cssText = `width:${sz}px;height:${sz}px;
+      left:${Math.random()*100}%;
+      bottom:${Math.random()*60}%;
+      animation-duration:${2+Math.random()*3}s;
+      animation-delay:${Math.random()*3}s;`;
+    ocean.appendChild(b);
+  }
+}
+
+// ── Flash helper ──────────────────────────────────────────────────────
+function flash(type) {
+  const el = document.getElementById('catch-flash');
+  el.className = type;
+  setTimeout(() => el.className = '', 200);
+}
+
+// ── Splash ────────────────────────────────────────────────────────────
+function splash(x, y, emoji) {
+  const el = document.createElement('div');
+  el.className = 'splash';
+  el.textContent = emoji;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+// ── Timer bar ─────────────────────────────────────────────────────────
+function startTimer() {
+  timerStart = performance.now();
+  if (timerRAF) cancelAnimationFrame(timerRAF);
+  function tick() {
+    const elapsed = performance.now() - timerStart;
+    const pct = Math.max(0, 1 - elapsed / TIME_LIMIT) * 100;
+    document.getElementById('timer-bar').style.width = pct + '%';
+    if (pct > 0 && !busy) timerRAF = requestAnimationFrame(tick);
+  }
+  timerRAF = requestAnimationFrame(tick);
+}
+
+// ── Fish movement (CSS animation via JS) ──────────────────────────────
+const activeFish = []; // { el, x, y, vx, vy, wave, waveAmp, waveSpd }
+let fishRAF = null;
+let lastT = 0;
+
+function animateFish(ts) {
+  const dt = Math.min((ts - lastT) / 1000, 0.05);
+  lastT = ts;
+  const ocean = document.getElementById('ocean');
+  const W = ocean.clientWidth, H = ocean.clientHeight;
+
+  activeFish.forEach(f => {
+    f.wave += dt * f.waveSpd;
+    f.x += f.vx * dt;
+    f.y += f.vy * dt + Math.sin(f.wave) * f.waveAmp * dt;
+
+    // bounce off walls (fish width ~270px)
+    if (f.x < 0 || f.x > W - 270) {
+      f.vx *= -1;
+      f.x = Math.max(0, Math.min(W - 270, f.x));
+    }
+    f.y = Math.max(10, Math.min(H - 60, f.y));
+    f.el.style.left = f.x + 'px';
+    f.el.style.top  = f.y + 'px';
+  });
+
+  if (!busy) fishRAF = requestAnimationFrame(animateFish);
+}
+
+// ── Build round ───────────────────────────────────────────────────────
+function startGame() {
+  score = 0; round = 0;
+  order = shuffle([...WORDS]);
+  document.getElementById('score-disp').textContent = '🐟 0점';
+  document.getElementById('overlay').classList.remove('show');
+  addBubbles();
+  startRound();
+}
+
+function startRound() {
+  busy = false;
+  if (roundTO) { clearTimeout(roundTO); roundTO = null; }
+  if (fishRAF) { cancelAnimationFrame(fishRAF); fishRAF = null; }
+  if (timerRAF) { cancelAnimationFrame(timerRAF); timerRAF = null; }
+
+  // Clear old fish
+  const ocean = document.getElementById('ocean');
+  fishEls.forEach(f => f.el.remove());
+  fishEls = [];
+  activeFish.length = 0;
+
+  const target = order[round];
+  document.getElementById('target-word').textContent = target.emoji + ' ' + target.word;
+  document.getElementById('round-disp').textContent = `${round+1} / ${WORDS.length}`;
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('timer-bar').style.width = '100%';
+
+  // Pick 4 fish: target + 3 others
+  const others = shuffle(WORDS.filter(w => w.word !== target.word)).slice(0, 3);
+  const options = shuffle([target, ...others]);
+
+  const W = ocean.clientWidth, H = ocean.clientHeight;
+
+  options.forEach((item, i) => {
+    const colorSet = FISH_COLORS[i % FISH_COLORS.length];
+    const el = document.createElement('div');
+    el.className = 'fish';
+    const startX = (i * (W / 4)) + Math.random() * 30;
+    const startY = 30 + Math.random() * (H - 80);
+    const speed  = 40 + Math.random() * 40;
+    const dir    = Math.random() > 0.5 ? 1 : -1;
+
+    el.style.left = startX + 'px';
+    el.style.top  = startY + 'px';
+    el.style.setProperty('--fc1', colorSet[0]);
+    el.style.setProperty('--fc2', colorSet[1]);
+
+    el.innerHTML = `
+      <div class="fish-body">
+        <img class="fish-img" src="images/${item.img}.png" alt="${item.word}">
+        <div class="fish-word">${item.word}</div>
+      </div>`;
+
+    el.dataset.word = item.word;
+    el.dataset.isTarget = item.word === target.word ? '1' : '0';
+    el.addEventListener('click', e => onFishTap(el, e, target));
+    el.addEventListener('touchstart', e => { e.preventDefault(); onFishTap(el, e, target); }, { passive: false });
+
+    ocean.appendChild(el);
+
+    const fishData = {
+      el, x: startX, y: startY,
+      vx: speed * dir, vy: (Math.random()-0.5)*10,
+      wave: Math.random()*Math.PI*2,
+      waveAmp: 15 + Math.random()*15,
+      waveSpd: 1.5 + Math.random()*2,
+    };
+    fishEls.push(fishData);
+    activeFish.push(fishData);
+  });
+
+  // Start animation
+  lastT = performance.now();
+  fishRAF = requestAnimationFrame(animateFish);
+
+  // Speak after delay
+  setTimeout(() => speak(target.word), 500);
+
+  // Start timer
+  startTimer();
+
+  // Time's up
+  roundTO = setTimeout(() => {
+    if (!busy) onTimeout(target);
+  }, TIME_LIMIT);
+}
+
+function onFishTap(el, e, target) {
+  if (busy) return;
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+
+  if (el.dataset.isTarget === '1') {
+    busy = true;
+    if (roundTO) { clearTimeout(roundTO); roundTO = null; }
+    if (timerRAF) { cancelAnimationFrame(timerRAF); timerRAF = null; }
+    if (fishRAF)  { cancelAnimationFrame(fishRAF); fishRAF = null; }
+    snd('catch');
+    flash('good');
+    splash(cx, cy, '✨');
+    el.classList.add('caught');
+    speak(target.word);
+    score++;
+    document.getElementById('score-disp').textContent = `🐟 ${score}점`;
+    showRoundResult(true, target);
+  } else {
+    snd('wrong');
+    flash('bad');
+    splash(cx, cy, '💦');
+    el.classList.remove('miss-shake');
+    void el.offsetWidth;
+    el.classList.add('miss-shake');
+  }
+}
+
+function onTimeout(target) {
+  busy = true;
+  if (fishRAF) { cancelAnimationFrame(fishRAF); fishRAF = null; }
+  if (timerRAF) { cancelAnimationFrame(timerRAF); timerRAF = null; }
+  document.getElementById('timer-bar').style.width = '0%';
+  snd('miss');
+  flash('bad');
+  showRoundResult(false, target);
+}
+
+function showRoundResult(caught, target) {
+  const isLast = round + 1 >= WORDS.length;
+  const ov = document.getElementById('overlay');
+  document.getElementById('ov-emoji').textContent = caught ? '🐟' : '😅';
+  document.getElementById('ov-msg').textContent   = caught
+    ? `잡았어요! ${target.emoji}\n${target.word}`
+    : `시간 초과!\n${target.emoji} ${target.word}`;
+  document.getElementById('ov-sub').textContent   = caught
+    ? `+1점! 현재 ${score}점`
+    : `빠르게 찾아봐요!`;
+  const btn = document.getElementById('ov-next');
+  btn.textContent = isLast ? '결과 보기 🏆' : '다음 물고기 ▶';
+  ov.classList.add('show');
+}
+
+function nextRound() {
+  round++;
+  if (round >= WORDS.length) showFinal();
+  else startRound();
+}
+
+function showFinal() {
+  const pct = Math.round(score/WORDS.length*100);
+  const praise = score===WORDS.length?'완벽 낚시꾼! 🏆':score>=9?'정말 잘했어요! 🌟':score>=6?'잘했어요! 👍':'다시 해볼까요! 💪';
+  document.getElementById('ov-emoji').textContent = score===WORDS.length?'🎊':'🎣';
+  document.getElementById('ov-msg').textContent   = `${score} / ${WORDS.length}마리\n${praise}`;
+  document.getElementById('ov-sub').textContent   = `성공률 ${pct}%`;
+  const btn = document.getElementById('ov-next');
+  btn.textContent = '다시 하기 🔄';
+  btn.onclick = () => startGame();
+  if (score===WORDS.length) snd('win');
+  document.getElementById('overlay').classList.add('show');
+}
+
+window.addEventListener('load', startGame);
+</script>
+</body>
+</html>

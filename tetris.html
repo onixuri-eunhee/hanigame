@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>영웅 블록 쌓기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(160deg, #1A1A4E 0%, #0D0D1A 100%);
+    height: 100dvh;
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px 8px 8px;
+    color: #fff;
+    user-select: none;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  #header {
+    flex-shrink: 0;
+    width: 100%; max-width: 360px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .home-link { font-size: 22px; text-decoration: none; opacity: 0.8; }
+  #score-disp { font-size: 20px; font-weight: 900; color: #FFD700; }
+  #level-disp { font-size: 14px; color: #aaa; background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 12px; }
+
+  #board-wrap {
+    flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
+  #board-canvas { display: block; }
+
+  #word-banner {
+    flex-shrink: 0;
+    margin: 8px 0 6px;
+    text-align: center;
+    width: 100%; max-width: 360px;
+    min-height: 52px;
+  }
+  #cur-word-en { font-size: clamp(22px, 6vw, 30px); font-weight: 900; color: #FFD700; letter-spacing: 1px; }
+  #cur-word-ko { font-size: 14px; color: #aaa; margin-top: 2px; }
+
+  #controls {
+    flex-shrink: 0;
+    display: flex; gap: 16px; align-items: center;
+    margin-top: 2px;
+  }
+  .ctrl-btn {
+    width: 76px; height: 76px;
+    border-radius: 50%; border: none;
+    font-size: 30px; font-weight: 900;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active { transform: scale(0.88); }
+  #btn-left  { background: linear-gradient(135deg, #4ECDC4, #26A69A); color: #fff; }
+  #btn-drop  { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; width: 90px; height: 90px; font-size: 24px; line-height: 1.2; }
+  #btn-right { background: linear-gradient(135deg, #FF6B6B, #E040FB); color: #fff; }
+
+  #overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 24px;
+    z-index: 100;
+  }
+  #overlay.show { display: flex; }
+  #ov-emoji { font-size: 80px; animation: pop 0.5s ease; }
+  @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  #ov-title { font-size: 28px; font-weight: 900; color: #FFD700; }
+  #ov-score { font-size: 17px; color: #ccc; }
+  .ov-btn { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; border: none; border-radius: 50px; padding: 16px 40px; font-size: 20px; font-weight: 900; cursor: pointer; margin-top: 6px; }
+  .home-link-sm { display: inline-block; margin-top: 4px; color: #a8dadc; border: 2px solid #a8dadc; border-radius: 50px; padding: 10px 28px; font-size: 15px; font-weight: 700; text-decoration: none; }
+
+  .star { position: fixed; pointer-events: none; font-size: 22px; animation: starFly 1s ease forwards; z-index: 200; }
+  @keyframes starFly { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-110px) scale(0.2);opacity:0} }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <a class="home-link" href="index.html">🏠</a>
+  <div id="score-disp">⭐ 0점</div>
+  <div id="level-disp">Lv.1</div>
+</div>
+
+<div id="board-wrap">
+  <canvas id="board-canvas"></canvas>
+</div>
+
+<div id="word-banner">
+  <div id="cur-word-en">준비!</div>
+  <div id="cur-word-ko">블록을 쌓아요</div>
+</div>
+
+<div id="controls">
+  <button class="ctrl-btn" id="btn-left">◀</button>
+  <button class="ctrl-btn" id="btn-drop">⬇<br>DROP</button>
+  <button class="ctrl-btn" id="btn-right">▶</button>
+</div>
+
+<div id="overlay">
+  <div id="ov-emoji">🏆</div>
+  <div id="ov-title">게임 오버!</div>
+  <div id="ov-score"></div>
+  <button class="ov-btn" id="ov-btn">다시 하기 🔄</button>
+  <a class="home-link-sm" href="index.html">← 게임 선택</a>
+</div>
+
+<script>
+const WORDS = [
+  { word: 'firefighter', ko: '소방관',   img: '08_woo_woo',           color: '#FF5722' },
+  { word: 'police',      ko: '경찰관',   img: '09_police',            color: '#1565C0' },
+  { word: 'doctor',      ko: '의사',     img: '13_doctor_child',      color: '#2E7D32' },
+  { word: 'brave',       ko: '용감한',   img: '05_brave_firefighter', color: '#E65100' },
+  { word: 'strong',      ko: '강한',     img: '10_strong',            color: '#283593' },
+  { word: 'kind',        ko: '친절한',   img: '14_doctors_kind',      color: '#00695C' },
+  { word: 'dream',       ko: '꿈',       img: '18_dream',             color: '#6A1B9A' },
+  { word: 'hero',        ko: '영웅',     img: '17_help_wide',         color: '#F9A825' },
+  { word: 'help',        ko: '돕다',     img: '06_help_people',       color: '#B71C1C' },
+  { word: 'save',        ko: '구하다',   img: '07_save_lives',        color: '#AD1457' },
+  { word: 'safe',        ko: '안전한',   img: '12_keep_safe',         color: '#1A237E' },
+  { word: 'thank you',   ko: '고마워요', img: '19_thank_you',         color: '#4E342E' },
+];
+
+const COLS = 4;
+const ROWS = 7;
+let CELL = 80;
+
+const canvas = document.getElementById('board-canvas');
+const ctx = canvas.getContext('2d');
+
+// Preload images
+const imgCache = {};
+WORDS.forEach(w => {
+  const img = new Image();
+  img.src = `images/${w.img}.png`;
+  imgCache[w.img] = img;
+});
+
+// Game state
+let board, falling, fallTimer, score, linesCleared, gameOver, level;
+
+function getFallInterval() { return Math.max(400, 1800 - (level - 1) * 180); }
+
+function initBoard() {
+  board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+}
+
+function startGame() {
+  initBoard();
+  score = 0; linesCleared = 0; level = 1; gameOver = false;
+  document.getElementById('score-disp').textContent = '⭐ 0점';
+  document.getElementById('level-disp').textContent = 'Lv.1';
+  document.getElementById('overlay').classList.remove('show');
+  spawnBlock();
+  scheduleFall();
+  draw();
+}
+
+function spawnBlock() {
+  const w = WORDS[Math.floor(Math.random() * WORDS.length)];
+  const col = Math.floor(Math.random() * COLS);
+  falling = { word: w, col, row: 0 };
+  document.getElementById('cur-word-en').textContent = w.word;
+  document.getElementById('cur-word-ko').textContent = w.ko;
+  speak(w.word);
+  if (board[0][col]) { endGame(); return; }
+  draw();
+}
+
+function scheduleFall() {
+  clearInterval(fallTimer);
+  fallTimer = setInterval(autoFall, getFallInterval());
+}
+
+function autoFall() {
+  if (gameOver || !falling) return;
+  const nextRow = falling.row + 1;
+  if (nextRow >= ROWS || board[nextRow][falling.col]) {
+    placeBlock();
+  } else {
+    falling.row = nextRow;
+    draw();
+  }
+}
+
+function moveBlock(dir) {
+  if (!falling || gameOver) return;
+  const nc = falling.col + dir;
+  if (nc < 0 || nc >= COLS) return;
+  if (board[falling.row][nc]) return;
+  falling.col = nc;
+  draw();
+}
+
+function dropBlock() {
+  if (!falling || gameOver) return;
+  while (falling.row + 1 < ROWS && !board[falling.row + 1][falling.col]) {
+    falling.row++;
+  }
+  placeBlock();
+}
+
+function placeBlock() {
+  if (!falling) return;
+  board[falling.row][falling.col] = falling.word;
+  snd('place');
+  falling = null;
+  clearInterval(fallTimer);
+  checkLines();
+}
+
+function checkLines() {
+  const full = [];
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r].every(c => c !== null)) full.push(r);
+  }
+  if (full.length === 0) { spawnBlock(); scheduleFall(); return; }
+
+  snd('clear');
+  let flash = 0;
+  const iv = setInterval(() => {
+    draw(flash++ % 2 === 0 ? full : []);
+    if (flash >= 6) {
+      clearInterval(iv);
+      const words = full.flatMap(r => board[r].filter(Boolean).map(c => c.word));
+      full.slice().reverse().forEach(r => { board.splice(r, 1); board.unshift(Array(COLS).fill(null)); });
+      linesCleared += full.length;
+      score += full.length * 100 * level;
+      level = Math.floor(linesCleared / 3) + 1;
+      document.getElementById('score-disp').textContent = `⭐ ${score}점`;
+      document.getElementById('level-disp').textContent = `Lv.${level}`;
+      spawnStars(8);
+      if (words.length) speak(words[0]);
+      spawnBlock(); scheduleFall(); draw();
+    }
+  }, 80);
+}
+
+function endGame() {
+  gameOver = true;
+  clearInterval(fallTimer);
+  const great = score >= 300;
+  document.getElementById('ov-emoji').textContent = great ? '🏆' : '😅';
+  document.getElementById('ov-title').textContent = great ? '대단해요! 🌟' : '게임 오버!';
+  document.getElementById('ov-score').textContent = `⭐ ${score}점 · ${linesCleared}줄 클리어`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────────
+function draw(flashRows = []) {
+  if (!board) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = c * CELL, y = r * CELL;
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.beginPath(); roundRect(ctx, x+1, y+1, CELL-2, CELL-2, 6); ctx.fill();
+      if (board[r][c]) drawCell(x, y, board[r][c], flashRows.includes(r));
+    }
+  }
+  if (falling) drawCell(falling.col * CELL, falling.row * CELL, falling.word, false, true);
+}
+
+function drawCell(x, y, word, flash, isFalling = false) {
+  const pad = 3, r = 8;
+  ctx.fillStyle = flash ? 'rgba(255,255,255,0.95)' : (isFalling ? word.color + 'FF' : word.color + 'CC');
+  ctx.beginPath(); roundRect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.fill();
+  if (isFalling) { ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2.5; ctx.stroke(); }
+
+  const img = imgCache[word.img];
+  const imgSz = CELL * 0.56;
+  const imgX = x + (CELL - imgSz) / 2;
+  const imgY = y + pad + 1;
+  if (img && img.complete && img.naturalWidth) {
+    ctx.save();
+    ctx.beginPath(); roundRect(ctx, imgX, imgY, imgSz, imgSz, 4); ctx.clip();
+    ctx.drawImage(img, imgX, imgY, imgSz, imgSz);
+    ctx.restore();
+  }
+
+  if (!flash) {
+    const fs = Math.max(8, Math.floor(CELL * 0.155));
+    ctx.font = `900 ${fs}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 3;
+    const ty = y + CELL - pad;
+    const parts = word.word.split(' ');
+    if (parts.length > 1 && ctx.measureText(word.word).width > CELL - 8) {
+      const fs2 = Math.max(7, fs - 1);
+      ctx.font = `900 ${fs2}px Arial`;
+      ctx.fillText(parts[0], x + CELL/2, ty - fs2 * 0.9);
+      ctx.fillText(parts[1], x + CELL/2, ty);
+    } else {
+      ctx.fillText(word.word, x + CELL/2, ty);
+    }
+    ctx.shadowBlur = 0;
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+// ── RESIZE ────────────────────────────────────────────────────────────
+function resize() {
+  const hdr = document.getElementById('header').offsetHeight;
+  const banner = document.getElementById('word-banner').offsetHeight;
+  const ctrl = document.getElementById('controls').offsetHeight;
+  const vpad = 10 + 6 + 8 + 6 + 2 + 8; // paddings/margins
+  const available = window.innerHeight - hdr - banner - ctrl - vpad;
+  const maxW = Math.min(window.innerWidth - 20, 360);
+  const cellByW = Math.floor(maxW / COLS);
+  const cellByH = Math.floor(available / ROWS);
+  CELL = Math.max(Math.min(cellByW, cellByH, 88), 60);
+  canvas.width = CELL * COLS;
+  canvas.height = CELL * ROWS;
+  draw();
+}
+
+// ── AUDIO ─────────────────────────────────────────────────────────────
+let _ac = null;
+function getAC() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function snd(type) {
+  try {
+    const ac = getAC(), osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    if (type === 'place') { osc.frequency.value = 200; g.gain.setValueAtTime(0.12, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12); }
+    if (type === 'clear') { osc.frequency.value = 660; g.gain.setValueAtTime(0.25, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.35); }
+    osc.start(); osc.stop(ac.currentTime + 0.4);
+  } catch(e) {}
+}
+
+function _unlockAll() {
+  try {
+    getAC().resume();
+    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
+    document.removeEventListener('touchstart', _unlockAll);
+    document.removeEventListener('click', _unlockAll);
+  } catch(e) {}
+}
+document.addEventListener('touchstart', _unlockAll, { passive: true });
+document.addEventListener('click', _unlockAll);
+
+// ── TTS ───────────────────────────────────────────────────────────────
+if (window.speechSynthesis) speechSynthesis.getVoices();
+function speak(word) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
+  const vs = speechSynthesis.getVoices();
+  const best = vs.find(v => v.name === 'Samantha') || vs.find(v => v.lang === 'en-US' && v.localService);
+  if (best) u.voice = best;
+  speechSynthesis.speak(u);
+}
+
+// ── STARS ─────────────────────────────────────────────────────────────
+function spawnStars(n) {
+  const E = ['⭐','✨','🌟','💫','🎉'];
+  for (let i = 0; i < n; i++) setTimeout(() => {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.textContent = E[Math.floor(Math.random() * E.length)];
+    s.style.cssText = `left:${Math.random()*80+10}vw;top:${Math.random()*50+20}vh`;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 1000);
+  }, i * 80);
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────────
+document.getElementById('btn-left').addEventListener('touchstart',  e => { e.preventDefault(); moveBlock(-1); }, { passive: false });
+document.getElementById('btn-right').addEventListener('touchstart', e => { e.preventDefault(); moveBlock(1);  }, { passive: false });
+document.getElementById('btn-drop').addEventListener('touchstart',  e => { e.preventDefault(); dropBlock();   }, { passive: false });
+document.getElementById('btn-left').addEventListener('click',  () => moveBlock(-1));
+document.getElementById('btn-right').addEventListener('click', () => moveBlock(1));
+document.getElementById('btn-drop').addEventListener('click',  () => dropBlock());
+document.getElementById('ov-btn').addEventListener('click', startGame);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); moveBlock(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); moveBlock(1); }
+  if (e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); dropBlock(); }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+resize();
+startGame();
+</script>
+</body>
+</html>

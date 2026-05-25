@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FCE4EC"/>
+    <stop offset="100%" stop-color="#F8BBD0"/>
+  </linearGradient></defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <ellipse cx="120" cy="228" rx="52" ry="9" fill="rgba(0,0,0,0.10)"/>
+
+
+  <circle cx="120" cy="72" r="40" fill="#FDBCB4"/>
+  <ellipse cx="120" cy="52" rx="36" ry="22" fill="#2C1A0E"/>
+  <circle cx="80" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="160" cy="72" r="10" fill="#FDBCB4"/>
+  <circle cx="107" cy="74" r="8" fill="white"/>
+  <circle cx="133" cy="74" r="8" fill="white"/>
+  <circle cx="108" cy="75" r="5" fill="#222"/>
+  <circle cx="134" cy="75" r="5" fill="#222"/>
+  <circle cx="108" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="134" cy="75" r="2.5" fill="#4A90D9"/>
+  <circle cx="108" cy="75" r="1.5" fill="#111"/>
+  <circle cx="134" cy="75" r="1.5" fill="#111"/>
+  <circle cx="110" cy="73" r="1.3" fill="white"/>
+  <circle cx="136" cy="73" r="1.3" fill="white"/>
+  <ellipse cx="120" cy="84" rx="3.5" ry="2.5" fill="#F08070"/>
+  <path d="M 107 89 Q 120 100 133 89" stroke="#C1440E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="101" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <circle cx="139" cy="86" r="8" fill="rgba(255,120,90,0.22)"/>
+  <!-- white doctor coat -->
+  <rect x="83" y="148" width="74" height="56" rx="14" fill="white" stroke="#F8BBD0" stroke-width="2"/>
+  <path d="M 108 148 L 120 160 L 132 148" fill="#F8BBD0" opacity="0.5"/>
+  <!-- cross -->
+  <rect x="117" y="158" width="6" height="18" rx="3" fill="#EF5350" opacity="0.7"/>
+  <rect x="111" y="164" width="18" height="6" rx="3" fill="#EF5350" opacity="0.7"/>
+  <!-- arms out gentle -->
+  <rect x="47" y="148" width="38" height="14" rx="7" fill="white" stroke="#F8BBD0" stroke-width="2"/>
+  <circle cx="44" cy="152" r="11" fill="#FDBCB4"/>
+  <rect x="155" y="148" width="38" height="14" rx="7" fill="white" stroke="#F8BBD0" stroke-width="2"/>
+  <circle cx="196" cy="152" r="11" fill="#FDBCB4"/>
+
+  <rect x="92" y="200" width="22" height="20" rx="8" fill="white"/>
+  <rect x="126" y="200" width="22" height="20" rx="8" fill="white"/>
+  <ellipse cx="103" cy="220" rx="13" ry="6" fill="#BDBDBD"/>
+  <ellipse cx="137" cy="220" rx="13" ry="6" fill="#BDBDBD"/>
+  <!-- BIG HEART -->
+  <path d="M 135 44 C 135 28 112 22 112 38 C 112 22 89 28 89 44 C 89 60 112 78 112 78 C 112 78 135 60 135 44 Z" fill="#FF5252"/>
+  <!-- small hearts floating -->
+  <path d="M 168 90 C 168 85 161 83 161 88 C 161 83 154 85 154 90 C 154 95 161 100 161 100 C 161 100 168 95 168 90 Z" fill="#FF8A80"/>
+  <path d="M 88 35 C 88 31 83 30 83 34 C 83 30 78 31 78 35 C 78 39 83 43 83 43 C 83 43 88 39 88 35 Z" fill="#FF8A80"/>
+  <path d="M 178 55 C 178 51 173 50 173 54 C 173 50 168 51 168 55 C 168 59 173 63 173 63 C 173 63 178 59 178 55 Z" fill="#FF5252" opacity="0.7"/>
+
+</svg>
