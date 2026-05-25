@@ -54,7 +54,7 @@
     position: relative;
   }
   .balloon-img {
-    width: 68px; height: 68px; border-radius: 50%;
+    width: 58px; height: 58px; border-radius: 50%;
     object-fit: cover; pointer-events: none; flex-shrink: 0;
   }
   .balloon-body::before {
@@ -72,8 +72,8 @@
     filter: brightness(0.8);
   }
   .balloon-word {
-    font-size: 12px; font-weight: 900; color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    font-size: 15px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5);
     text-align: center; padding: 0 6px;
     word-break: normal; overflow-wrap: break-word;
     line-height: 1.2; max-width: 102px;
@@ -195,6 +195,7 @@ const BALLOON_COLORS = ['#FF5252','#FF9800','#4CAF50','#2196F3','#9C27B0','#FF40
 let score = 0, round = 0, busy = false;
 let order = [];
 let missTimeout = null;
+let audioUnlocked = false, pendingWord = null;
 
 // ── Audio ─────────────────────────────────────────────────────────────
 let _ac = null;
@@ -243,9 +244,12 @@ function _unlockAudio() {
     const src = ctx.createBufferSource();
     src.buffer = buf; src.connect(ctx.destination); src.start(0);
     ctx.resume();
+    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
+    audioUnlocked = true;
     document.removeEventListener('touchstart', _unlockAudio);
     document.removeEventListener('touchend',   _unlockAudio);
     document.removeEventListener('click',      _unlockAudio);
+    if (pendingWord) { const w = pendingWord; pendingWord = null; speak(w); }
   } catch(e) {}
 }
 document.addEventListener('touchstart', _unlockAudio, { passive: true });
@@ -256,6 +260,7 @@ document.addEventListener('click',      _unlockAudio);
 if (window.speechSynthesis) speechSynthesis.getVoices();
 function speak(word) {
   if (!window.speechSynthesis) return;
+  if (!audioUnlocked) { pendingWord = word; return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
   u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
