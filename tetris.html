@@ -147,11 +147,14 @@ const imgCache = {};
 WORDS.forEach(w => {
   const img = new Image();
   img.src = `images/${w.img}.png`;
+  img.onload = () => { if (board) draw(); };
   imgCache[w.img] = img;
 });
 
 // Game state
-let board, falling, fallTimer, score, linesCleared, gameOver, level;
+let board, falling, fallTimer, flashTimer, score, linesCleared, gameOver, level;
+let audioUnlocked = false;
+let lastTouch = 0;
 
 function getFallInterval() { return Math.max(400, 1800 - (level - 1) * 180); }
 
@@ -160,8 +163,9 @@ function initBoard() {
 }
 
 function startGame() {
+  clearInterval(flashTimer); flashTimer = null;
   initBoard();
-  score = 0; linesCleared = 0; level = 1; gameOver = false;
+  score = 0; linesCleared = 0; level = 1; gameOver = false; falling = null;
   document.getElementById('score-disp').textContent = '⭐ 0점';
   document.getElementById('level-disp').textContent = 'Lv.1';
   document.getElementById('overlay').classList.remove('show');
@@ -232,15 +236,15 @@ function checkLines() {
 
   snd('clear');
   let flash = 0;
-  const iv = setInterval(() => {
+  flashTimer = setInterval(() => {
     draw(flash++ % 2 === 0 ? full : []);
     if (flash >= 6) {
-      clearInterval(iv);
+      clearInterval(flashTimer); flashTimer = null;
       const words = full.flatMap(r => board[r].filter(Boolean).map(c => c.word));
       full.slice().reverse().forEach(r => { board.splice(r, 1); board.unshift(Array(COLS).fill(null)); });
       linesCleared += full.length;
       score += full.length * 100 * level;
-      level = Math.floor(linesCleared / 3) + 1;
+      level = Math.min(6, Math.floor(linesCleared / 3) + 1);
       document.getElementById('score-disp').textContent = `⭐ ${score}점`;
       document.getElementById('level-disp').textContent = `Lv.${level}`;
       spawnStars(8);
@@ -252,6 +256,7 @@ function checkLines() {
 
 function endGame() {
   gameOver = true;
+  falling = null;
   clearInterval(fallTimer);
   const great = score >= 300;
   document.getElementById('ov-emoji').textContent = great ? '🏆' : '😅';
@@ -358,6 +363,7 @@ function _unlockAll() {
   try {
     getAC().resume();
     if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
+    audioUnlocked = true;
     document.removeEventListener('touchstart', _unlockAll);
     document.removeEventListener('click', _unlockAll);
   } catch(e) {}
@@ -368,7 +374,7 @@ document.addEventListener('click', _unlockAll);
 // ── TTS ───────────────────────────────────────────────────────────────
 if (window.speechSynthesis) speechSynthesis.getVoices();
 function speak(word) {
-  if (!window.speechSynthesis) return;
+  if (!window.speechSynthesis || !audioUnlocked) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
   u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
@@ -392,12 +398,12 @@ function spawnStars(n) {
 }
 
 // ── CONTROLS ──────────────────────────────────────────────────────────
-document.getElementById('btn-left').addEventListener('touchstart',  e => { e.preventDefault(); moveBlock(-1); }, { passive: false });
-document.getElementById('btn-right').addEventListener('touchstart', e => { e.preventDefault(); moveBlock(1);  }, { passive: false });
-document.getElementById('btn-drop').addEventListener('touchstart',  e => { e.preventDefault(); dropBlock();   }, { passive: false });
-document.getElementById('btn-left').addEventListener('click',  () => moveBlock(-1));
-document.getElementById('btn-right').addEventListener('click', () => moveBlock(1));
-document.getElementById('btn-drop').addEventListener('click',  () => dropBlock());
+document.getElementById('btn-left').addEventListener('touchstart',  e => { e.preventDefault(); lastTouch = Date.now(); moveBlock(-1); }, { passive: false });
+document.getElementById('btn-right').addEventListener('touchstart', e => { e.preventDefault(); lastTouch = Date.now(); moveBlock(1);  }, { passive: false });
+document.getElementById('btn-drop').addEventListener('touchstart',  e => { e.preventDefault(); lastTouch = Date.now(); dropBlock();   }, { passive: false });
+document.getElementById('btn-left').addEventListener('click',  () => { if (Date.now() - lastTouch < 500) return; moveBlock(-1); });
+document.getElementById('btn-right').addEventListener('click', () => { if (Date.now() - lastTouch < 500) return; moveBlock(1); });
+document.getElementById('btn-drop').addEventListener('click',  () => { if (Date.now() - lastTouch < 500) return; dropBlock(); });
 document.getElementById('ov-btn').addEventListener('click', startGame);
 
 document.addEventListener('keydown', e => {
