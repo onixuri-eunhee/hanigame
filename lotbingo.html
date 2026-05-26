@@ -37,10 +37,31 @@ body {
 /* ── Drum ── */
 .machine { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px; width: 100%; }
 #drum-canvas {
-  display: block; width: 100%; max-width: 340px; height: auto;
+  display: block;
+  width: min(560px, calc(100vw - 32px));
+  height: auto;
   border-radius: 16px;
   filter: drop-shadow(0 6px 20px rgba(0,0,0,0.75));
 }
+/* ── Tablet / iPad ── */
+@media (min-width: 600px) {
+  body { padding: 16px 20px 36px; }
+  .title { font-size: 30px; }
+  .p-badge { font-size: 20px; }
+  .p-badge .lines { font-size: 15px; }
+  .drawn-pill { font-size: 16px; padding: 4px 14px; }
+  .header-row, .recent-wrap, .players { max-width: 760px; }
+  .r-ball { width: 38px; height: 38px; font-size: 13px; }
+  .player-wrap { padding: 10px 10px 12px; border-radius: 14px; }
+  .player-name { font-size: 20px; }
+  .player-bingo { font-size: 14px; }
+  .mini-grid { gap: 6px; }
+  .cell { font-size: clamp(16px, 2.4vw, 24px); border-radius: 10px; border-width: 2px; }
+  .btn-draw { font-size: 22px; padding: 18px 0; max-width: 560px; }
+  .btn-mix  { font-size: 20px; }
+  .machine > div { max-width: 560px; }
+}
+
 .btn-mix {
   flex: 1; padding: 15px 0; border: none; border-radius: 50px;
   font-size: 16px; font-weight: 900;
@@ -198,23 +219,29 @@ body {
 </div>
 
 <script>
-// ── Canvas setup ──────────────────────────────────────────────────────
+// ── Canvas setup (responsive) ─────────────────────────────────────────
 const canvas = document.getElementById('drum-canvas');
 const ctx    = canvas.getContext('2d');
 const dpr    = window.devicePixelRatio || 1;
-const W = 340, H = 210;
+const maxCW  = Math.min(560, window.innerWidth - 32);
+const SCALE  = maxCW / 340;
+const W = maxCW, H = Math.round(210 * SCALE);
 canvas.width  = W * dpr;
 canvas.height = H * dpr;
 canvas.style.width  = W + 'px';
 canvas.style.height = H + 'px';
 ctx.scale(dpr, dpr);
 
-// ── Drum geometry ─────────────────────────────────────────────────────
-const DX = W/2, DY = 80, DR = 68;
-const MINI_R = 10, RESULT_R = 23;
-const EXIT_Y = DY + DR;   // 148
-const SLOT_W = 13;
-const RESULT_Y = H - 24;  // 186
+// ── Drum geometry (scaled) ────────────────────────────────────────────
+const DX = Math.round(W / 2);
+const DY = Math.round(80 * SCALE);
+const DR = Math.round(68 * SCALE);
+const MINI_R   = Math.round(10 * SCALE);
+const RESULT_R = Math.round(23 * SCALE);
+const EXIT_Y   = DY + DR;
+const SLOT_W   = Math.round(13 * SCALE);
+const RESULT_Y = H - Math.round(24 * SCALE);
+const N_BALLS  = Math.min(22, Math.round(15 * SCALE));
 
 const COLS = [
   '#FF5E5E','#FF9442','#FFE033','#4FCF74',
@@ -225,7 +252,7 @@ const COLS = [
 // ── Ball physics ──────────────────────────────────────────────────────
 let balls = [];
 function initBalls() {
-  balls = Array.from({length: 15}, (_, i) => {
+  balls = Array.from({length: N_BALLS}, (_, i) => {
     const a = (i/15)*Math.PI*2;
     const d = (Math.random()*0.55+0.12)*(DR-MINI_R-4);
     return {
