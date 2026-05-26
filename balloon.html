@@ -405,6 +405,7 @@ function onBalloonTap(balloon, target) {
 }
 
 function onMiss(target) {
+  if (speakTimer) { clearTimeout(speakTimer); speakTimer = null; }
   busy = true;
   snd('wrong');
   const flash = document.getElementById('miss-flash');
