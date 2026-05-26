@@ -244,7 +244,6 @@ function checkLines() {
     draw(flash++ % 2 === 0 ? full : []);
     if (flash >= 6) {
       clearInterval(flashTimer); flashTimer = null;
-      const words = full.flatMap(r => board[r].filter(Boolean).map(c => c.word));
       full.slice().reverse().forEach(r => { board.splice(r, 1); board.unshift(Array(COLS).fill(null)); });
       linesCleared += full.length;
       score += full.length * 100 * level;
@@ -253,7 +252,9 @@ function checkLines() {
       document.getElementById('level-disp').textContent = `Lv.${level}`;
       spawnStars(12);
       speak('Three heroes! Firefighter, police, doctor!');
-      spawnBlock(); scheduleFall(); draw();
+      draw();
+      // delay spawnBlock so hero phrase plays before next speak() cancels it
+      setTimeout(() => { spawnBlock(); scheduleFall(); }, 1400);
     }
   }, 80);
 }

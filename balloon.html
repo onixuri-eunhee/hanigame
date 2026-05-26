@@ -195,7 +195,7 @@ const BALLOON_COLORS = ['#FF5252','#FF9800','#4CAF50','#2196F3','#9C27B0','#FF40
 let score = 0, round = 0, busy = false;
 let order = [];
 let missTimeout = null;
-let audioUnlocked = false, pendingWord = null;
+let audioUnlocked = false, pendingWord = null, speakTimer = null;
 
 // ── Audio ─────────────────────────────────────────────────────────────
 let _ac = null;
@@ -248,7 +248,10 @@ function _unlockAudio() {
     document.removeEventListener('touchstart', _unlockAudio);
     document.removeEventListener('touchend',   _unlockAudio);
     document.removeEventListener('click',      _unlockAudio);
-    // touchstart 핸들러 안이므로 iOS가 speak() 허용
+    if (window.speechSynthesis) {
+      // iOS warm-up: always initialize speech engine from user gesture
+      speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
     if (pendingWord) { const w = pendingWord; pendingWord = null; speak(w); }
   } catch(e) {}
 }
@@ -367,7 +370,8 @@ function startRound() {
   });
 
   // speak target after 600ms
-  setTimeout(() => speak(target.word), 600);
+  if (speakTimer) clearTimeout(speakTimer);
+  speakTimer = setTimeout(() => { speakTimer = null; speak(target.word); }, 600);
 
   // miss if all escape
   missTimeout = setTimeout(() => {
@@ -379,6 +383,7 @@ function onBalloonTap(balloon, target) {
   if (busy) return;
   if (balloon.dataset.isTarget === '1') {
     busy = true;
+    if (speakTimer) { clearTimeout(speakTimer); speakTimer = null; }
     snd('pop');
     const rect = balloon.getBoundingClientRect();
     spawnConfetti(rect.left + rect.width/2, rect.top + rect.height/2);
