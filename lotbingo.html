@@ -232,6 +232,11 @@ canvas.height = H * dpr;
 canvas.style.width  = W + 'px';
 canvas.style.height = H + 'px';
 ctx.scale(dpr, dpr);
+// Resize guard: reload page on significant orientation change to re-compute geometry
+window.addEventListener('resize', () => {
+  const newCW = Math.min(560, window.innerWidth - 32);
+  if (Math.abs(newCW - W) > 20) location.reload();
+});
 
 // ── Drum geometry (scaled) ────────────────────────────────────────────
 const DX = Math.round(W / 2);
@@ -254,7 +259,7 @@ const COLS = [
 let balls = [];
 function initBalls() {
   balls = Array.from({length: N_BALLS}, (_, i) => {
-    const a = (i/15)*Math.PI*2;
+    const a = (i/N_BALLS)*Math.PI*2;
     const d = (Math.random()*0.55+0.12)*(DR-MINI_R-4);
     return {
       x: DX + Math.cos(a)*d,
@@ -515,7 +520,7 @@ function onDraw(){
   if(!gameActive||isDrawing) return;
   const rem=[];
   for(let n=1;n<=TOTAL;n++) if(!drawnNums.has(n)) rem.push(n);
-  if(!rem.length){showResult('draw');return;}
+  if(!rem.length){gameActive=false;showResult('draw');return;}
   const num=rem[Math.floor(Math.random()*rem.length)];
   isDrawing=true; pendingNum=num;
   drumState='spin'; spinSpeed=1.0;
