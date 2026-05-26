@@ -82,6 +82,7 @@ body {
   box-shadow: 0 4px 18px rgba(255,180,0,0.4);
 }
 .btn-draw:active { transform: scale(0.93); }
+.btn-draw:disabled { opacity: 0.35; pointer-events: none; }
 
 /* ── Recent balls ── */
 .recent-wrap { width: 100%; max-width: 380px; margin-bottom: 7px; }
@@ -455,13 +456,10 @@ function shuffle(a){
 
 function startGame(){
   const pool=Array.from({length:TOTAL},(_,i)=>i+1);
-  // Each player gets a different random 25 numbers
-  const all=shuffle(pool);
-  cards[0]=shuffle(all.slice(0,50)).slice(0,25);
-  cards[1]=shuffle(all.slice(0,50)).slice(0,25); // independent shuffle from same pool
-  // Re-shuffle independently for true randomness
-  cards[0]=shuffle(pool).slice(0,25);
-  cards[1]=shuffle(pool).slice(0,25);
+  // 50개 뽑아 25씩 나눔 → 두 카드 숫자 완전 분리(겹침 0)
+  const fifty=shuffle(pool).slice(0,50);
+  cards[0]=shuffle(fifty.slice(0,25));
+  cards[1]=shuffle(fifty.slice(25,50));
 
   drawnNums=new Set();
   markedCells=[new Set(),new Set()];
@@ -555,9 +553,11 @@ function onLand(num){
 
   renderRecent();
 
-  if(wins[0]&&wins[1]){ gameActive=false; setTimeout(()=>showResult('tie'),1200); return; }
-  if(wins[0]){ gameActive=false; setTimeout(()=>showResult(0),1200); return; }
-  if(wins[1]){ gameActive=false; setTimeout(()=>showResult(1),1200); return; }
+  if(wins[0]||wins[1]){
+    gameActive=false; isDrawing=false; setBtns(true);
+    const result=wins[0]&&wins[1]?'tie':wins[0]?0:1;
+    setTimeout(()=>showResult(result),1200); return;
+  }
 
   isDrawing=false;
   setBtns(false);
@@ -575,7 +575,7 @@ function getNewBingos(p){
 
 function showResult(winner){
   gameActive=false;
-  document.getElementById('draw-btn').disabled=true;
+  setBtns(true);
   const l0=triggeredLines[0].size, l1=triggeredLines[1].size;
 
   if(winner==='tie'||winner==='draw'){
