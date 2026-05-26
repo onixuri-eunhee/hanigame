@@ -159,7 +159,7 @@ WORDS.forEach(w => {
 
 // Game state
 let board, falling, fallTimer, flashTimer, score, linesCleared, gameOver, level;
-let audioUnlocked = false;
+let audioUnlocked = false, pendingSpeak = null;
 let lastTouch = 0;
 
 function getFallInterval() { return Math.max(400, 1800 - (level - 1) * 180); }
@@ -382,10 +382,13 @@ function snd(type) {
 function _unlockAll() {
   try {
     getAC().resume();
-    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
+    if (window.speechSynthesis) {
+      speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
     audioUnlocked = true;
     document.removeEventListener('touchstart', _unlockAll);
     document.removeEventListener('click', _unlockAll);
+    if (pendingSpeak) { const w = pendingSpeak; pendingSpeak = null; speak(w); }
   } catch(e) {}
 }
 document.addEventListener('touchstart', _unlockAll, { passive: true });
@@ -394,7 +397,8 @@ document.addEventListener('click', _unlockAll);
 // ── TTS ───────────────────────────────────────────────────────────────
 if (window.speechSynthesis) speechSynthesis.getVoices();
 function speak(word) {
-  if (!window.speechSynthesis || !audioUnlocked) return;
+  if (!window.speechSynthesis) return;
+  if (!audioUnlocked) { pendingSpeak = word; return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
   u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
