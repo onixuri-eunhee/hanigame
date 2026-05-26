@@ -57,7 +57,7 @@
   }
   .hero-char:nth-child(2) { animation-delay: 0.45s; }
   .hero-char:nth-child(3) { animation-delay: 0.9s; }
-  .hero-char img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+  .hero-char img { width: 100%; height: 100%; object-fit: contain; object-position: center center; padding: 4px; }
 
   @keyframes float {
     0%,100% { transform: translateY(0px); }
@@ -104,23 +104,24 @@
   /* 이미지 영역 */
   .img-wrap {
     width: 100%;
-    height: 94px;
+    height: 110px;
     position: relative;
     overflow: hidden;
-    background: rgba(0,0,0,0.25);
+    background: rgba(0,0,0,0.2);
     flex-shrink: 0;
   }
   .img-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: center 15%;
+    object-fit: contain;
+    object-position: center center;
+    padding: 6px;
   }
   .img-wrap::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, var(--bg) 100%);
+    background: linear-gradient(to bottom, transparent 60%, var(--bg) 100%);
   }
   .emoji-only {
     display: flex;
@@ -174,7 +175,7 @@
     flex-shrink: 0;
     border-radius: 0;
   }
-  .full .img-wrap img { object-position: center 20%; }
+  .full .img-wrap img { object-position: center center; }
   .full .img-wrap::after {
     background: linear-gradient(to right, transparent 50%, var(--bg) 100%);
   }
