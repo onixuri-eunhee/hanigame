@@ -317,6 +317,7 @@ function showQuestion() {
 function onChoice(i) {
   if (answered) return;
   answered = true;
+  if (window.speechSynthesis) speechSynthesis.cancel();
   const btns = document.querySelectorAll('.choice-btn');
   btns.forEach(b => b.classList.add('disabled'));
 

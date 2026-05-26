@@ -208,6 +208,7 @@ const FISH_COLORS = [
 
 const TIME_LIMIT = 8000; // ms per round
 let score = 0, round = 0, order = [], busy = false;
+let audioUnlocked = false, pendingWord = null;
 let timerStart = 0, timerRAF = null, roundTO = null;
 let fishEls = [];
 
@@ -262,9 +263,11 @@ function _unlockAudio() {
     const src=ctx.createBufferSource();
     src.buffer=buf; src.connect(ctx.destination); src.start(0);
     ctx.resume();
+    audioUnlocked = true;
     document.removeEventListener('touchstart',_unlockAudio);
     document.removeEventListener('touchend',  _unlockAudio);
     document.removeEventListener('click',     _unlockAudio);
+    if (pendingWord) { const w = pendingWord; pendingWord = null; speak(w); }
   } catch(e) {}
 }
 document.addEventListener('touchstart',_unlockAudio,{passive:true});
@@ -275,6 +278,7 @@ document.addEventListener('click',     _unlockAudio);
 if (window.speechSynthesis) speechSynthesis.getVoices();
 function speak(word) {
   if (!window.speechSynthesis) return;
+  if (!audioUnlocked) { pendingWord = word; return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
   u.lang='en-US'; u.rate=0.75; u.pitch=1.2;

@@ -376,7 +376,7 @@ function onChoice(i) {
   answered = true;
   if (autoTTSTO) { clearTimeout(autoTTSTO); autoTTSTO = null; }
   document.querySelectorAll('.choice').forEach(c => c.classList.add('disabled'));
-  speechSynthesis.cancel();
+  if (window.speechSynthesis) speechSynthesis.cancel();
 
   const btn = document.getElementById('listen-btn');
   btn.classList.remove('playing');

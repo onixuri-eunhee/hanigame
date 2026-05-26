@@ -244,11 +244,11 @@ function _unlockAudio() {
     const src = ctx.createBufferSource();
     src.buffer = buf; src.connect(ctx.destination); src.start(0);
     ctx.resume();
-    if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); speechSynthesis.cancel(); }
     audioUnlocked = true;
     document.removeEventListener('touchstart', _unlockAudio);
     document.removeEventListener('touchend',   _unlockAudio);
     document.removeEventListener('click',      _unlockAudio);
+    // touchstart 핸들러 안이므로 iOS가 speak() 허용
     if (pendingWord) { const w = pendingWord; pendingWord = null; speak(w); }
   } catch(e) {}
 }
