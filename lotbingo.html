@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>숫자 빙고</title>
+<title>숫자 빙고 2인</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -11,138 +11,158 @@ body {
   background: linear-gradient(160deg, #1A2A4E 0%, #0D0D1A 100%);
   font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
   display: flex; flex-direction: column; align-items: center;
-  padding: 14px 14px 32px;
-  color: #fff; overflow-x: hidden;
+  padding: 10px 12px 28px; color: #fff; overflow-x: hidden;
 }
 
-.header { text-align: center; width: 100%; margin-bottom: 10px; }
-.title { font-size: 24px; font-weight: 900; color: #FFD700; text-shadow: 0 0 18px rgba(255,215,0,0.5); }
-.header-row { display: flex; justify-content: center; gap: 10px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
-#bingo-count { font-size: 16px; font-weight: 900; color: #FF8C00; }
-#drawn-count { font-size: 13px; color: #aaa; background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 12px; }
-.home-link { color: #a8dadc; border: 1.5px solid #a8dadc; border-radius: 50px; padding: 4px 14px; font-size: 12px; font-weight: 700; text-decoration: none; }
+/* ── Header ── */
+.header { text-align: center; width: 100%; margin-bottom: 8px; }
+.title { font-size: 22px; font-weight: 900; color: #FFD700; text-shadow: 0 0 16px rgba(255,215,0,0.5); }
+.header-row {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; max-width: 380px; margin: 5px auto 0;
+}
+.p-badge {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-size: 14px; font-weight: 900; min-width: 72px;
+}
+.p-badge .lines { font-size: 11px; font-weight: 700; opacity: 0.75; }
+.p1-color { color: #FF7070; }
+.p2-color { color: #70B8FF; }
+.drawn-pill {
+  font-size: 12px; color: #aaa; background: rgba(255,255,255,0.1);
+  padding: 3px 10px; border-radius: 12px; text-align: center;
+}
+.home-link { display: block; text-align: center; color: #a8dadc; border: 1.5px solid #a8dadc; border-radius: 50px; padding: 3px 12px; font-size: 11px; font-weight: 700; text-decoration: none; margin: 4px auto 0; width: fit-content; }
 
-/* Machine */
-.machine { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px; width: 100%; max-width: 380px; }
-
-.ball {
-  width: 100px; height: 100px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fffde0, #ffd700 50%, #d48000);
-  box-shadow: 0 6px 24px rgba(255,215,0,0.55), inset 0 -4px 10px rgba(0,0,0,0.18);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px; font-weight: 900; color: #1a1a4e;
-  animation: float-ball 2.8s ease-in-out infinite;
-  position: relative; overflow: hidden; user-select: none;
+/* ── Drum ── */
+.machine { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px; width: 100%; }
+#drum-canvas {
+  display: block; width: 100%; max-width: 340px; height: auto;
+  border-radius: 16px;
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.75));
 }
-.ball::before {
-  content: '';
-  position: absolute; width: 30%; height: 30%;
-  background: rgba(255,255,255,0.45); border-radius: 50%;
-  top: 14%; left: 17%;
-}
-@keyframes float-ball {
-  0%,100% { transform: translateY(0) rotate(-3deg); }
-  50%      { transform: translateY(-8px) rotate(3deg); }
-}
-.ball.drawing { animation: ball-draw 0.55s cubic-bezier(0.36,0.07,0.19,0.97); }
-@keyframes ball-draw {
-  0%   { transform: scale(1) rotate(0deg); }
-  15%  { transform: scale(0.82) rotate(-28deg); }
-  38%  { transform: scale(1.28) rotate(22deg); }
-  60%  { transform: scale(0.94) rotate(-8deg); }
-  80%  { transform: scale(1.07) rotate(4deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
-
-.btn-row { display: flex; gap: 8px; width: 100%; }
-.btn {
-  flex: 1; padding: 14px 0;
-  border: none; border-radius: 50px;
-  font-size: 15px; font-weight: 900;
+.btn-mix {
+  flex: 1; padding: 15px 0; border: none; border-radius: 50px;
+  font-size: 16px; font-weight: 900;
+  background: rgba(255,255,255,0.12); color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.22);
   cursor: pointer; touch-action: manipulation;
   transition: transform 0.1s, opacity 0.1s;
 }
-.btn:active { transform: scale(0.93); }
-.btn:disabled { opacity: 0.4; pointer-events: none; }
-.btn-draw { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; flex: 2; }
-.btn-auto { background: rgba(255,255,255,0.12); color: #fff; border: 1.5px solid rgba(255,255,255,0.2); }
-.btn-auto.on { background: rgba(255,80,0,0.22); border-color: #FF7B00; color: #FF8C00; }
+.btn-mix:active { transform: scale(0.93); }
+.btn-mix:disabled { opacity: 0.35; pointer-events: none; }
+.btn-draw {
+  flex: 2; max-width: unset;
+  padding: 15px 0; border: none; border-radius: 50px;
+  font-size: 18px; font-weight: 900;
+  background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000;
+  cursor: pointer; touch-action: manipulation;
+  transition: transform 0.1s;
+  box-shadow: 0 4px 18px rgba(255,180,0,0.4);
+}
+.btn-draw:active { transform: scale(0.93); }
 
-/* Recent */
-.recent-wrap { width: 100%; max-width: 380px; margin-bottom: 8px; }
-.recent-label { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+/* ── Recent balls ── */
+.recent-wrap { width: 100%; max-width: 380px; margin-bottom: 7px; }
+.recent-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
 .recent-balls { display: flex; flex-wrap: wrap; gap: 4px; }
 .r-ball {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(255,255,255,0.1);
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(255,255,255,0.09);
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.5);
+  font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.45);
 }
-.r-ball.on-card { background: rgba(255,215,0,0.22); color: #FFD700; }
+.r-ball.hit-any { background: rgba(255,215,0,0.2); color: #FFD700; }
 
-/* 5×5 Grid */
-#bingo-grid {
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  gap: 6px; width: 100%; max-width: 380px;
+/* ── Player cards (side by side) ── */
+.players {
+  display: flex; gap: 8px;
+  width: 100%; max-width: 380px;
+}
+.player-wrap {
+  flex: 1; display: flex; flex-direction: column; gap: 5px;
+  border-radius: 12px; padding: 6px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  transition: box-shadow 0.4s, border-color 0.4s;
+}
+.player-wrap.p0-wrap { border-color: rgba(255,110,110,0.25); }
+.player-wrap.p1-wrap { border-color: rgba(110,184,255,0.25); }
+.player-wrap.winner  { box-shadow: 0 0 22px rgba(255,215,0,0.5); border-color: #FFD700; }
+
+.player-hdr { display: flex; justify-content: space-between; align-items: center; }
+.player-name { font-size: 13px; font-weight: 900; }
+.player-bingo { font-size: 10px; font-weight: 700; opacity: 0.7; }
+
+/* 5×5 mini grid */
+.mini-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
 }
 .cell {
   aspect-ratio: 1;
   background: rgba(255,255,255,0.07);
-  border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.11);
+  border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; font-weight: 900; color: rgba(255,255,255,0.75);
-  transition: background 0.25s, border-color 0.25s, color 0.25s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  font-size: 11px; font-weight: 900; color: rgba(255,255,255,0.7);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
   position: relative;
 }
-.cell.hit {
-  background: rgba(255,215,0,0.2); border-color: #FFD700; color: #FFD700;
-}
-.cell.hit::after {
-  content: '✓'; position: absolute; top: 2px; right: 4px;
-  font-size: 9px; color: #FFD700; opacity: 0.8;
-}
-.cell.bingo-line {
-  background: rgba(255,100,0,0.32); border-color: #FF7B00;
-  animation: pulse 0.65s ease-in-out infinite alternate;
-}
-@keyframes pulse {
-  from { box-shadow: 0 0 8px rgba(255,123,0,0.4); }
-  to   { box-shadow: 0 0 22px rgba(255,123,0,0.9); }
+
+/* P1 (red) */
+.p0-wrap .cell.hit { background: rgba(255,80,80,0.22); border-color: #FF6060; color: #FFAAAA; }
+.p0-wrap .cell.bingo-line { background: rgba(255,60,60,0.38); border-color: #FF4444; animation: pulse-r 0.65s ease-in-out infinite alternate; }
+@keyframes pulse-r {
+  from { box-shadow: 0 0 6px rgba(255,60,60,0.4); }
+  to   { box-shadow: 0 0 18px rgba(255,60,60,0.9); }
 }
 
-/* Overlay */
+/* P2 (blue) */
+.p1-wrap .cell.hit { background: rgba(60,150,255,0.22); border-color: #58B8FF; color: #AADDFF; }
+.p1-wrap .cell.bingo-line { background: rgba(60,150,255,0.38); border-color: #3898FF; animation: pulse-b 0.65s ease-in-out infinite alternate; }
+@keyframes pulse-b {
+  from { box-shadow: 0 0 6px rgba(60,150,255,0.4); }
+  to   { box-shadow: 0 0 18px rgba(60,150,255,0.9); }
+}
+
+/* ── Overlay ── */
 #overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.9);
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
   align-items: center; justify-content: center;
   flex-direction: column; gap: 12px; z-index: 99;
   text-align: center; padding: 20px;
 }
 #overlay.show { display: flex; }
 #ov-emoji { font-size: 72px; }
-#ov-title { font-size: 30px; font-weight: 900; color: #FFD700; }
-#ov-sub   { font-size: 15px; color: #ccc; margin-top: 2px; }
-.ov-btn { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; border: none; border-radius: 50px; padding: 16px 44px; font-size: 20px; font-weight: 900; cursor: pointer; margin-top: 8px; touch-action: manipulation; }
-.home-link-sm { display: inline-block; margin-top: 6px; color: #a8dadc; border: 2px solid #a8dadc; border-radius: 50px; padding: 10px 28px; font-size: 15px; font-weight: 700; text-decoration: none; }
+#ov-title { font-size: 32px; font-weight: 900; color: #FFD700; }
+#ov-sub   { font-size: 15px; color: #ccc; }
+#ov-scores { font-size: 14px; color: #aaa; margin-top: 2px; }
+.ov-btn { background: linear-gradient(135deg,#FFD700,#FF8C00); color:#000; border:none; border-radius:50px; padding:15px 42px; font-size:19px; font-weight:900; cursor:pointer; margin-top:8px; touch-action:manipulation; }
+.home-link-sm { display:inline-block; margin-top:6px; color:#a8dadc; border:2px solid #a8dadc; border-radius:50px; padding:10px 28px; font-size:15px; font-weight:700; text-decoration:none; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="title">🎱 숫자 빙고!</div>
+  <div class="title">🎱 숫자 빙고 2인!</div>
   <div class="header-row">
-    <div id="bingo-count">빙고 0줄</div>
-    <div id="drawn-count">0개 뽑음</div>
-    <a class="home-link" href="index.html">← 홈</a>
+    <div class="p-badge p1-color">
+      <span>🔴 1P</span>
+      <span class="lines" id="p0-bingo">빙고 0줄</span>
+    </div>
+    <div class="drawn-pill" id="drawn-count">0개 뽑음</div>
+    <div class="p-badge p2-color" style="align-items:flex-end">
+      <span>2P 🔵</span>
+      <span class="lines" id="p1-bingo">빙고 0줄</span>
+    </div>
   </div>
+  <a class="home-link" href="index.html">← 홈</a>
 </div>
 
 <div class="machine">
-  <div id="ball" class="ball"><span id="ball-num">?</span></div>
-  <div class="btn-row">
-    <button class="btn btn-draw" id="draw-btn" onclick="drawBall()">🎱 공 뽑기!</button>
-    <button class="btn btn-auto" id="auto-btn" onclick="toggleAuto()">자동</button>
+  <canvas id="drum-canvas"></canvas>
+  <div style="display:flex;gap:8px;width:100%;max-width:340px;">
+    <button class="btn-mix"  id="mix-btn"  onclick="onMix()">🌀 섞기</button>
+    <button class="btn-draw" id="draw-btn" onclick="onDraw()">🎱 뽑기!</button>
   </div>
 </div>
 
@@ -151,223 +171,404 @@ body {
   <div class="recent-balls" id="recent-balls"></div>
 </div>
 
-<div id="bingo-grid"></div>
+<div class="players">
+  <div class="player-wrap p0-wrap" id="wrap-0">
+    <div class="player-hdr">
+      <span class="player-name p1-color">🔴 1P</span>
+      <span class="player-bingo p1-color" id="p0-lines">0 / 5줄</span>
+    </div>
+    <div class="mini-grid" id="grid-0"></div>
+  </div>
+  <div class="player-wrap p1-wrap" id="wrap-1">
+    <div class="player-hdr">
+      <span class="player-name p2-color">2P 🔵</span>
+      <span class="player-bingo p2-color" id="p1-lines">0 / 5줄</span>
+    </div>
+    <div class="mini-grid" id="grid-1"></div>
+  </div>
+</div>
 
 <div id="overlay">
-  <div id="ov-emoji">🎉</div>
-  <div id="ov-title">빙고 5줄 완성!</div>
+  <div id="ov-emoji">🏆</div>
+  <div id="ov-title"></div>
   <div id="ov-sub"></div>
+  <div id="ov-scores"></div>
   <button class="ov-btn" onclick="startGame()">다시 하기 🔄</button>
   <a class="home-link-sm" href="index.html">← 게임 선택</a>
 </div>
 
 <script>
-const TOTAL_BALLS = 100;
-const WIN_LINES   = 5;
+// ── Canvas setup ──────────────────────────────────────────────────────
+const canvas = document.getElementById('drum-canvas');
+const ctx    = canvas.getContext('2d');
+const dpr    = window.devicePixelRatio || 1;
+const W = 340, H = 210;
+canvas.width  = W * dpr;
+canvas.height = H * dpr;
+canvas.style.width  = W + 'px';
+canvas.style.height = H + 'px';
+ctx.scale(dpr, dpr);
 
-// 12 possible lines on a 5×5 grid
-const LINES = [
+// ── Drum geometry ─────────────────────────────────────────────────────
+const DX = W/2, DY = 80, DR = 68;
+const MINI_R = 10, RESULT_R = 23;
+const EXIT_Y = DY + DR;   // 148
+const SLOT_W = 13;
+const RESULT_Y = H - 24;  // 186
+
+const COLS = [
+  '#FF5E5E','#FF9442','#FFE033','#4FCF74',
+  '#58B8FF','#C47BFF','#FF6BB5','#5DDDDD',
+  '#FF8C42','#80FF72','#F7A8D8','#A0E0FF'
+];
+
+// ── Ball physics ──────────────────────────────────────────────────────
+let balls = [];
+function initBalls() {
+  balls = Array.from({length: 15}, (_, i) => {
+    const a = (i/15)*Math.PI*2;
+    const d = (Math.random()*0.55+0.12)*(DR-MINI_R-4);
+    return {
+      x: DX + Math.cos(a)*d,
+      y: DY + Math.sin(a)*d,
+      vx: (Math.random()-.5)*2.2,
+      vy: (Math.random()-.5)*2.2,
+      c: COLS[i % COLS.length],
+    };
+  });
+}
+
+// ── Drum animation state ──────────────────────────────────────────────
+let drumState = 'idle'; // idle | mix | spin | eject | show
+let spinSpeed = 1.0;
+let pendingNum = null, curNum = null;
+let eject = null;
+let ejFrames = 0, mixFrames = 0;
+const EJECT_F = 44, MIX_F = 150; // 150 frames ≈ 2.5s
+let lastT = 0, mixFlash = 0;
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = lastT ? Math.min((now-lastT)/16.67, 2.5) : 1;
+  lastT = now;
+
+  if (drumState === 'mix') {
+    mixFrames += dt;
+    mixFlash  = (mixFlash + dt * 0.18) % 1;
+    if (mixFrames < 25)       spinSpeed = Math.min(spinSpeed + 0.15*dt, 4.5);
+    else if (mixFrames < 115) spinSpeed = 4.5;
+    else                       spinSpeed = Math.max(spinSpeed - 0.08*dt, 1.0);
+    if (mixFrames >= MIX_F) {
+      drumState = curNum !== null ? 'show' : 'idle';
+      spinSpeed = 1.0;
+      setBtns(false);
+    }
+  }
+
+  if (drumState === 'spin') {
+    spinSpeed = Math.min(spinSpeed + 0.055*dt, 3.5);
+    if (spinSpeed >= 3.2) {
+      drumState = 'eject';
+      ejFrames  = 0;
+      eject     = { x:DX, y:EXIT_Y, r:MINI_R, num:null, p:0 };
+    }
+  }
+  if (drumState === 'eject') {
+    ejFrames += dt;
+    const p  = Math.min(ejFrames/EJECT_F, 1);
+    const ep = p<0.5 ? 2*p*p : -1+(4-2*p)*p;
+    eject.p  = p;
+    eject.x  = DX + Math.sin(p*Math.PI*4)*6;
+    eject.y  = (EXIT_Y+2) + (RESULT_Y-EXIT_Y-2)*ep;
+    eject.r  = MINI_R + (RESULT_R-MINI_R)*ep;
+    if (p > 0.4) eject.num = pendingNum;
+    if (p >= 1) {
+      eject = null; curNum = pendingNum;
+      drumState = 'show'; spinSpeed = 2.0;
+      onLand(curNum);
+    }
+  }
+  if (drumState === 'show') spinSpeed = Math.max(spinSpeed-0.018*dt, 1.0);
+
+  // Physics
+  balls.forEach(b => {
+    b.x += b.vx*spinSpeed*dt;
+    b.y += b.vy*spinSpeed*dt;
+    b.vy += 0.13*spinSpeed*dt;
+    const dx=b.x-DX, dy=b.y-DY;
+    const d=Math.sqrt(dx*dx+dy*dy), mx=DR-MINI_R-1;
+    if (d > mx) {
+      const nx=dx/d, ny=dy/d, dot=b.vx*nx+b.vy*ny;
+      b.vx = (b.vx-2*dot*nx)*0.86;
+      b.vy = (b.vy-2*dot*ny)*0.86;
+      b.x = DX+nx*mx; b.y = DY+ny*mx;
+      if (Math.hypot(b.vx,b.vy)<0.65) {
+        const a=Math.random()*Math.PI*2;
+        b.vx += Math.cos(a); b.vy += Math.sin(a)-0.3;
+      }
+    }
+  });
+
+  render();
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Outer glow
+  const glow = ctx.createRadialGradient(DX,DY,DR*0.3,DX,DY,DR*1.55);
+  glow.addColorStop(0,'rgba(0,0,0,0)'); glow.addColorStop(1,'rgba(60,80,220,0.13)');
+  ctx.beginPath(); ctx.arc(DX,DY,DR*1.55,0,Math.PI*2); ctx.fillStyle=glow; ctx.fill();
+
+  // Drum body
+  const bg = ctx.createRadialGradient(DX-24,DY-28,5,DX,DY,DR);
+  bg.addColorStop(0,'#1e2f78'); bg.addColorStop(1,'#07081c');
+  ctx.beginPath(); ctx.arc(DX,DY,DR,0,Math.PI*2); ctx.fillStyle=bg; ctx.fill();
+
+  // Balls clipped
+  ctx.save();
+  ctx.beginPath(); ctx.arc(DX,DY,DR-1,0,Math.PI*2); ctx.clip();
+  balls.forEach(b => {
+    ctx.beginPath(); ctx.arc(b.x,b.y,MINI_R,0,Math.PI*2); ctx.fillStyle=b.c; ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x-MINI_R*0.3,b.y-MINI_R*0.36,MINI_R*0.28,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.58)'; ctx.fill();
+  });
+  ctx.restore();
+
+  // Drum rim (flashes during mix)
+  const rimAlpha = drumState==='mix' ? 0.5 + 0.5*Math.sin(mixFlash*Math.PI*2) : 0.8;
+  const rimColor = drumState==='mix'
+    ? `rgba(255,${Math.floor(150+105*Math.sin(mixFlash*Math.PI*2))},0,${rimAlpha})`
+    : `rgba(255,215,0,${rimAlpha})`;
+  ctx.beginPath(); ctx.arc(DX,DY,DR,0,Math.PI*2);
+  ctx.strokeStyle=rimColor; ctx.lineWidth=drumState==='mix'?3.5:2.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(DX,DY,DR-4,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=3; ctx.stroke();
+
+  // Chute
+  const cBot = RESULT_Y-RESULT_R;
+  ctx.strokeStyle='rgba(255,215,0,0.45)'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(DX-SLOT_W,EXIT_Y+1); ctx.lineTo(DX-SLOT_W,cBot);
+  ctx.moveTo(DX+SLOT_W,EXIT_Y+1); ctx.lineTo(DX+SLOT_W,cBot);
+  ctx.stroke();
+
+  // Result platform
+  ctx.beginPath(); ctx.arc(DX,RESULT_Y,RESULT_R+4,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,215,0,0.2)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  if (eject) {
+    const na = eject.p>0.4 ? Math.min((eject.p-0.4)/0.28,1) : 0;
+    drawGoldBall(eject.x,eject.y,eject.r,eject.num,na);
+  }
+  if (drumState==='show' && curNum!==null && !eject)
+    drawGoldBall(DX,RESULT_Y,RESULT_R,curNum,1);
+}
+
+function drawGoldBall(x,y,r,num,na) {
+  const g=ctx.createRadialGradient(x-r*0.32,y-r*0.38,r*0.06,x,y,r);
+  g.addColorStop(0,'#fffce0'); g.addColorStop(0.42,'#FFD700'); g.addColorStop(1,'#b06400');
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-r*0.28,y-r*0.33,r*0.24,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.58)'; ctx.fill();
+  if (num!==null && na>0) {
+    ctx.globalAlpha=na; ctx.fillStyle='#1a1a4e';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=`900 ${Math.floor(r*0.82)}px 'Arial Rounded MT Bold',Arial`;
+    ctx.fillText(num,x,y+1); ctx.globalAlpha=1;
+  }
+}
+
+// ── Game logic ────────────────────────────────────────────────────────
+const TOTAL=100, WIN_LINES=5, NP=2;
+const LINES=[
   [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
   [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
   [0,6,12,18,24],[4,8,12,16,20]
 ];
 
-let card = [], drawnNums = new Set(), markedCells = new Set();
-let triggeredLines = new Set(), drawnList = [];
-let gameActive = false, isDrawing = false, autoTimer = null;
+let cards=[[],[]], drawnNums=new Set();
+let markedCells=[new Set(),new Set()], triggeredLines=[new Set(),new Set()];
+let drawnList=[], gameActive=false, isDrawing=false;
 
 // ── Audio ─────────────────────────────────────────────────────────────
-let _ac = null;
-function getAC() {
-  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
-  if (_ac.state === 'suspended') _ac.resume();
-  return _ac;
+let _ac=null;
+function getAC(){
+  if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+  if(_ac.state==='suspended') _ac.resume(); return _ac;
 }
-function snd(type) {
-  try {
-    const ac = getAC();
-    if (type === 'bingo') {
-      [523,659,784,1047].forEach((f,i) => {
-        const o = ac.createOscillator(), g = ac.createGain();
-        o.connect(g); g.connect(ac.destination);
-        o.frequency.value = f;
-        const t = ac.currentTime + i * 0.13;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.2, t + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
-        o.start(t); o.stop(t + 0.5);
-      });
-      return;
+function snd(type){
+  try{
+    const ac=getAC();
+    if(type==='bingo'){
+      [523,659,784,1047].forEach((f,i)=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.frequency.value=f;
+        const t=ac.currentTime+i*0.13;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.2,t+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.42);
+        o.start(t); o.stop(t+0.5);
+      }); return;
     }
-    const o = ac.createOscillator(), g = ac.createGain();
+    const o=ac.createOscillator(),g=ac.createGain();
     o.connect(g); g.connect(ac.destination);
-    if (type === 'hit') {
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.15, ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.25);
-    } else {
-      o.frequency.value = 440;
-      g.gain.setValueAtTime(0.07, ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
-    }
-    o.start(); o.stop(ac.currentTime + 0.3);
-  } catch(e) {}
+    if(type==='hit'){o.frequency.value=880;g.gain.setValueAtTime(0.14,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.25);}
+    else{o.frequency.value=320;g.gain.setValueAtTime(0.05,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.1);}
+    o.start(); o.stop(ac.currentTime+0.3);
+  }catch(e){}
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+function shuffle(a){
+  const b=[...a];
+  for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}
+  return b;
+}
+
+function startGame(){
+  const pool=Array.from({length:TOTAL},(_,i)=>i+1);
+  // Each player gets a different random 25 numbers
+  const all=shuffle(pool);
+  cards[0]=shuffle(all.slice(0,50)).slice(0,25);
+  cards[1]=shuffle(all.slice(0,50)).slice(0,25); // independent shuffle from same pool
+  // Re-shuffle independently for true randomness
+  cards[0]=shuffle(pool).slice(0,25);
+  cards[1]=shuffle(pool).slice(0,25);
+
+  drawnNums=new Set();
+  markedCells=[new Set(),new Set()];
+  triggeredLines=[new Set(),new Set()];
+  drawnList=[]; gameActive=true; isDrawing=false;
+  curNum=null; drumState='idle'; spinSpeed=1.0; eject=null; mixFrames=0; mixFlash=0;
+
+  for(let p=0;p<NP;p++){
+    document.getElementById(`p${p}-bingo`).textContent='빙고 0줄';
+    document.getElementById(`p${p}-lines`).textContent='0 / 5줄';
+    document.getElementById(`wrap-${p}`).classList.remove('winner');
   }
-  return a;
-}
-
-// ── Game Init ─────────────────────────────────────────────────────────
-function startGame() {
-  stopAuto();
-  const pool = Array.from({length: TOTAL_BALLS}, (_, i) => i + 1);
-  card = shuffle(pool).slice(0, 25);
-  drawnNums = new Set(); markedCells = new Set();
-  triggeredLines = new Set(); drawnList = [];
-  gameActive = true; isDrawing = false;
-  document.getElementById('ball-num').textContent = '?';
-  document.getElementById('bingo-count').textContent = '빙고 0줄';
-  document.getElementById('drawn-count').textContent = '0개 뽑음';
+  document.getElementById('drawn-count').textContent='0개 뽑음';
   document.getElementById('overlay').classList.remove('show');
-  renderGrid();
-  renderRecent();
+  setBtns(false);
+  initBalls(); renderGrids(); renderRecent();
 }
 
-function renderGrid() {
-  const grid = document.getElementById('bingo-grid');
-  grid.innerHTML = '';
-  card.forEach((num, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.id = `cell-${i}`;
-    cell.textContent = num;
-    grid.appendChild(cell);
-  });
-}
-
-function renderRecent() {
-  const wrap = document.getElementById('recent-balls');
-  wrap.innerHTML = '';
-  [...drawnList].reverse().slice(0, 25).forEach(n => {
-    const el = document.createElement('div');
-    el.className = 'r-ball' + (card.includes(n) ? ' on-card' : '');
-    el.textContent = n;
-    wrap.appendChild(el);
-  });
-}
-
-// ── Draw ──────────────────────────────────────────────────────────────
-function drawBall() {
-  if (!gameActive || isDrawing) return;
-
-  const remaining = [];
-  for (let n = 1; n <= TOTAL_BALLS; n++) {
-    if (!drawnNums.has(n)) remaining.push(n);
+function renderGrids(){
+  for(let p=0;p<NP;p++){
+    const g=document.getElementById(`grid-${p}`); g.innerHTML='';
+    cards[p].forEach((num,i)=>{
+      const c=document.createElement('div');
+      c.className='cell'; c.id=`c-${p}-${i}`; c.textContent=num;
+      g.appendChild(c);
+    });
   }
-  if (remaining.length === 0) { showResult(); return; }
+}
 
-  isDrawing = true;
-  getAC();
+function renderRecent(){
+  const w=document.getElementById('recent-balls'); w.innerHTML='';
+  [...drawnList].reverse().slice(0,30).forEach(n=>{
+    const onAny=cards[0].includes(n)||cards[1].includes(n);
+    const el=document.createElement('div');
+    el.className='r-ball'+(onAny?' hit-any':'');
+    el.textContent=n; w.appendChild(el);
+  });
+}
 
-  const ballEl  = document.getElementById('ball');
-  const numEl   = document.getElementById('ball-num');
-  ballEl.classList.add('drawing');
-  numEl.textContent = '?';
-  snd('draw');
+function setBtns(disabled) {
+  document.getElementById('draw-btn').disabled = disabled;
+  document.getElementById('mix-btn').disabled  = disabled;
+}
 
-  setTimeout(() => {
-    const num = remaining[Math.floor(Math.random() * remaining.length)];
-    drawnNums.add(num);
-    drawnList.push(num);
+function onMix(){
+  if (!gameActive || isDrawing || drumState==='mix' || drumState==='spin' || drumState==='eject') return;
+  drumState = 'mix'; mixFrames = 0; mixFlash = 0; spinSpeed = 1.0;
+  setBtns(true);
+  snd('click');
+}
 
-    numEl.textContent = num;
-    ballEl.classList.remove('drawing');
-    document.getElementById('drawn-count').textContent = `${drawnNums.size}개 뽑음`;
+function onDraw(){
+  if(!gameActive||isDrawing) return;
+  const rem=[];
+  for(let n=1;n<=TOTAL;n++) if(!drawnNums.has(n)) rem.push(n);
+  if(!rem.length){showResult('draw');return;}
+  const num=rem[Math.floor(Math.random()*rem.length)];
+  isDrawing=true; pendingNum=num;
+  drumState='spin'; spinSpeed=1.0;
+  setBtns(true);
+  getAC(); snd('click');
+}
 
-    let hasHit = false;
-    card.forEach((n, i) => {
-      if (n === num && !markedCells.has(i)) {
-        markedCells.add(i);
-        hasHit = true;
-        document.getElementById(`cell-${i}`).classList.add('hit');
+function onLand(num){
+  drawnNums.add(num); drawnList.push(num);
+  document.getElementById('drawn-count').textContent=`${drawnNums.size}개 뽑음`;
+
+  const wins=[false,false];
+
+  for(let p=0;p<NP;p++){
+    let hasHit=false;
+    cards[p].forEach((n,i)=>{
+      if(n===num && !markedCells[p].has(i)){
+        markedCells[p].add(i); hasHit=true;
+        document.getElementById(`c-${p}-${i}`).classList.add('hit');
       }
     });
-
-    if (hasHit) {
+    if(hasHit){
       snd('hit');
-      const newBingos = getNewBingos();
-      if (newBingos.length > 0) {
-        newBingos.forEach(line =>
-          line.forEach(i => document.getElementById(`cell-${i}`).classList.add('bingo-line'))
-        );
-        document.getElementById('bingo-count').textContent = `빙고 ${triggeredLines.size}줄`;
+      const nb=getNewBingos(p);
+      if(nb.length>0){
+        nb.forEach(line=>line.forEach(i=>document.getElementById(`c-${p}-${i}`).classList.add('bingo-line')));
+        const tl=triggeredLines[p].size;
+        document.getElementById(`p${p}-bingo`).textContent=`빙고 ${tl}줄`;
+        document.getElementById(`p${p}-lines`).textContent=`${tl} / 5줄`;
         snd('bingo');
-        if (triggeredLines.size >= WIN_LINES) {
-          gameActive = false;
-          stopAuto();
-          setTimeout(showResult, 1200);
-        }
+        if(tl>=WIN_LINES) wins[p]=true;
       }
     }
+  }
 
-    renderRecent();
-    isDrawing = false;
-  }, 580);
+  renderRecent();
+
+  if(wins[0]&&wins[1]){ gameActive=false; setTimeout(()=>showResult('tie'),1200); return; }
+  if(wins[0]){ gameActive=false; setTimeout(()=>showResult(0),1200); return; }
+  if(wins[1]){ gameActive=false; setTimeout(()=>showResult(1),1200); return; }
+
+  isDrawing=false;
+  setBtns(false);
 }
 
-function getNewBingos() {
-  const newLines = [];
-  LINES.forEach((line, li) => {
-    if (!triggeredLines.has(li) && line.every(i => markedCells.has(i))) {
-      triggeredLines.add(li);
-      newLines.push(line);
+function getNewBingos(p){
+  const nl=[];
+  LINES.forEach((line,li)=>{
+    if(!triggeredLines[p].has(li)&&line.every(i=>markedCells[p].has(i))){
+      triggeredLines[p].add(li); nl.push(line);
     }
   });
-  return newLines;
+  return nl;
 }
 
-// ── Auto draw ─────────────────────────────────────────────────────────
-function toggleAuto() {
-  if (autoTimer) {
-    stopAuto();
+function showResult(winner){
+  gameActive=false;
+  document.getElementById('draw-btn').disabled=true;
+  const l0=triggeredLines[0].size, l1=triggeredLines[1].size;
+
+  if(winner==='tie'||winner==='draw'){
+    document.getElementById('ov-emoji').textContent='🤝';
+    document.getElementById('ov-title').textContent=winner==='tie'?'동시 달성! 무승부!':'공이 다 떨어졌어요!';
+    document.getElementById('ov-sub').textContent='';
+    document.getElementById('ov-scores').textContent=`🔴 1P: ${l0}줄  |  2P 🔵: ${l1}줄`;
   } else {
-    const btn = document.getElementById('auto-btn');
-    btn.classList.add('on');
-    btn.textContent = '■ 정지';
-    drawBall();
-    autoTimer = setInterval(() => {
-      if (!gameActive) { stopAuto(); return; }
-      drawBall();
-    }, 2500);
+    const pName=winner===0?'🔴 1P':'2P 🔵';
+    document.getElementById('ov-emoji').textContent=winner===0?'🔴':'🔵';
+    document.getElementById('ov-title').textContent=`${pName} 우승! 🏆`;
+    document.getElementById('ov-sub').textContent=`🎱 ${drawnNums.size}번째 공에서 완성!`;
+    document.getElementById('ov-scores').textContent=`🔴 1P: ${l0}줄  |  2P 🔵: ${l1}줄`;
+    document.getElementById(`wrap-${winner}`).classList.add('winner');
   }
-}
-
-function stopAuto() {
-  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-  const btn = document.getElementById('auto-btn');
-  btn.classList.remove('on');
-  btn.textContent = '자동';
-}
-
-// ── Result ────────────────────────────────────────────────────────────
-function showResult() {
-  gameActive = false;
-  stopAuto();
-  document.getElementById('ov-emoji').textContent = '🎉';
-  document.getElementById('ov-title').textContent = '빙고 5줄 완성!';
-  document.getElementById('ov-sub').textContent   = `🎱 ${drawnNums.size}번째 공에서 완성!`;
   document.getElementById('overlay').classList.add('show');
 }
 
-document.addEventListener('touchstart', () => { try { getAC(); } catch(e){} }, { passive: true, once: true });
-window.addEventListener('load', startGame);
+document.addEventListener('touchstart',()=>{try{getAC();}catch(e){}},{passive:true,once:true});
+window.addEventListener('load',()=>{ startGame(); requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
