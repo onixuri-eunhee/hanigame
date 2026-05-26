@@ -298,7 +298,6 @@ function onCellTap(i) {
     marked.add(i);
     score++;
     snd('correct');
-    speak(target.word);
     cell.classList.add('marked');
     document.getElementById('score-disp').textContent = `⭐ ${score}점`;
 
@@ -316,8 +315,9 @@ function onCellTap(i) {
       return;
     }
 
+    speak(target.word);
     callIdx++;
-    setTimeout(callNext, 1100);
+    setTimeout(callNext, 1600);
   } else {
     snd('wrong');
     cell.classList.add('wrong');
