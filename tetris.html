@@ -104,7 +104,7 @@
 <div id="word-banner">
   <div id="cur-word-en">준비!</div>
   <div id="cur-word-ko">블록을 쌓아요</div>
-  <div id="goal-hint">🔴빨강 🔵파랑 🟢초록 — 같은 색 3개 모으면 클리어!</div>
+  <div id="goal-hint">🔴🔵🟢 가로·세로 3개 모으면 클리어!</div>
 </div>
 
 <div id="controls">
@@ -233,40 +233,76 @@ function placeBlock() {
   checkLines();
 }
 
-function getRowClearGroup(r) {
-  // 해당 줄에서 가장 많이 등장한 colorGroup이 CLEAR_COUNT 이상이면 해당 그룹 반환
-  const cells = board[r].filter(Boolean);
-  if (cells.length < CLEAR_COUNT) return null;
-  const count = {};
-  cells.forEach(w => { count[w.colorGroup] = (count[w.colorGroup] || 0) + 1; });
-  const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
-  return best && best[1] >= CLEAR_COUNT ? best[0] : null;
+function getMatchCells() {
+  const toClear = new Set(); // "r,c"
+  let clearGroup = null;
+
+  // 가로: 한 줄에 같은 색 CLEAR_COUNT개 이상 → 해당 줄 전체
+  for (let r = 0; r < ROWS; r++) {
+    const cells = board[r].filter(Boolean);
+    if (cells.length < CLEAR_COUNT) continue;
+    const count = {};
+    cells.forEach(w => { count[w.colorGroup] = (count[w.colorGroup] || 0) + 1; });
+    const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+    if (best && best[1] >= CLEAR_COUNT) {
+      for (let c = 0; c < COLS; c++) toClear.add(`${r},${c}`);
+      if (!clearGroup) clearGroup = best[0];
+    }
+  }
+
+  // 세로: 같은 색 CLEAR_COUNT개 이상 연속 → 해당 셀만
+  for (let c = 0; c < COLS; c++) {
+    let sStart = 0, sGroup = null, sLen = 0;
+    for (let r = 0; r < ROWS; r++) {
+      const cell = board[r][c];
+      const g = cell ? cell.colorGroup : null;
+      if (g && g === sGroup) {
+        sLen++;
+        if (sLen >= CLEAR_COUNT) {
+          for (let k = sStart; k <= r; k++) toClear.add(`${k},${c}`);
+          if (!clearGroup) clearGroup = g;
+        }
+      } else {
+        sStart = r; sGroup = g; sLen = g ? 1 : 0;
+      }
+    }
+  }
+
+  return { toClear, clearGroup };
+}
+
+function applyGravity() {
+  for (let c = 0; c < COLS; c++) {
+    const col = [];
+    for (let r = 0; r < ROWS; r++) { if (board[r][c]) col.push(board[r][c]); }
+    for (let r = 0; r < ROWS; r++) board[r][c] = null;
+    for (let i = 0; i < col.length; i++) board[ROWS - col.length + i][c] = col[i];
+  }
 }
 
 function checkLines() {
-  const full = [];
-  const clearGroups = [];
-  for (let r = 0; r < ROWS; r++) {
-    const g = getRowClearGroup(r);
-    if (g) { full.push(r); clearGroups.push(g); }
-  }
-  if (full.length === 0) { spawnBlock(); scheduleFall(); return; }
+  const { toClear, clearGroup } = getMatchCells();
+  if (toClear.size === 0) { spawnBlock(); scheduleFall(); return; }
 
   snd('clear');
   let flash = 0;
   flashTimer = setInterval(() => {
-    draw(flash++ % 2 === 0 ? full : []);
+    draw(flash++ % 2 === 0 ? toClear : new Set());
     if (flash >= 6) {
       clearInterval(flashTimer); flashTimer = null;
-      full.slice().reverse().forEach(r => { board.splice(r, 1); board.unshift(Array(COLS).fill(null)); });
-      linesCleared += full.length;
-      score += full.length * 100 * level;
+      toClear.forEach(key => {
+        const [r, c] = key.split(',').map(Number);
+        board[r][c] = null;
+      });
+      applyGravity();
+      linesCleared += Math.ceil(toClear.size / COLS);
+      score += toClear.size * 30 * level;
       level = Math.min(6, Math.floor(linesCleared / 3) + 1);
       document.getElementById('score-disp').textContent = `⭐ ${score}점`;
       document.getElementById('level-disp').textContent = `Lv.${level}`;
       spawnStars(12);
       const ttsMap = { red: 'Firefighter! Brave!', blue: 'Police! Strong!', green: 'Doctor! Kind!', white: 'Hero! Dream!' };
-      speak(ttsMap[clearGroups[0]] || 'Great!');
+      speak(ttsMap[clearGroup] || 'Great!');
       draw();
       setTimeout(() => { spawnBlock(); scheduleFall(); }, 1400);
     }
@@ -285,7 +321,7 @@ function endGame() {
 }
 
 // ── DRAW ──────────────────────────────────────────────────────────────
-function draw(flashRows = []) {
+function draw(flashCells = new Set()) {
   if (!board) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let r = 0; r < ROWS; r++) {
@@ -293,7 +329,7 @@ function draw(flashRows = []) {
       const x = c * CELL, y = r * CELL;
       ctx.fillStyle = 'rgba(255,255,255,0.04)';
       ctx.beginPath(); roundRect(ctx, x+1, y+1, CELL-2, CELL-2, 6); ctx.fill();
-      if (board[r][c]) drawCell(x, y, board[r][c], flashRows.includes(r));
+      if (board[r][c]) drawCell(x, y, board[r][c], flashCells.has(`${r},${c}`));
     }
   }
   if (falling) drawCell(falling.col * CELL, falling.row * CELL, falling.word, false, true);
