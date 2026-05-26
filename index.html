@@ -6,94 +6,296 @@
 <title>승한이 영어 게임</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     min-height: 100vh;
-    background: linear-gradient(160deg, #1A1A4E 0%, #0D0D1A 100%);
+    background: #09091F;
     font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
     display: flex; flex-direction: column; align-items: center;
-    padding: 24px 16px 32px;
+    padding-bottom: 36px;
     overflow-x: hidden;
   }
-  .title-wrap { text-align: center; margin-bottom: 28px; }
-  .title-emoji { font-size: 64px; animation: float 2s ease-in-out infinite; display: block; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-  h1 { font-size: 26px; font-weight: 900; color: #FFD700;
-       text-shadow: 0 0 18px rgba(255,215,0,0.5); margin-top: 6px; }
-  .sub { font-size: 14px; color: #aaa; margin-top: 4px; }
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 420px; }
-  .card {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 20px 10px; border-radius: 20px; text-decoration: none;
-    touch-action: manipulation; transition: transform 0.12s, box-shadow 0.12s;
-    gap: 8px; min-height: 130px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-    border: 2px solid rgba(255,255,255,0.08);
+  /* ── 히어로 배너 ── */
+  .hero {
+    width: 100%;
+    max-width: 480px;
+    padding: 28px 20px 0;
+    text-align: center;
+    position: relative;
   }
-  .card:active { transform: scale(0.94); }
-  .card-emoji { font-size: 44px; line-height: 1; }
-  .card-name { font-size: 16px; font-weight: 900; color: #fff; text-align: center; }
-  .card-desc { font-size: 12px; color: rgba(255,255,255,0.65); text-align: center; line-height: 1.4; }
+  .hero-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 0 0 24px rgba(255,215,0,0.55);
+    letter-spacing: -0.5px;
+  }
+  .hero-sub {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 4px;
+    margin-bottom: 18px;
+  }
 
-  .c1 { background: linear-gradient(135deg, #FF5722, #FF8C00); }
-  .c2 { background: linear-gradient(135deg, #4ECDC4, #26A69A); }
-  .c3 { background: linear-gradient(135deg, #7B61FF, #4A90D9); }
-  .c4 { background: linear-gradient(135deg, #FF6B6B, #E040FB); }
-  .c5 { background: linear-gradient(135deg, #43A047, #00BCD4); }
-  .c6 { background: linear-gradient(135deg, #F9A825, #FF7043); }
-  .c7 { background: linear-gradient(135deg, #26C6DA, #7B1FA2); }
+  .hero-chars {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .hero-char {
+    width: 88px;
+    height: 88px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    animation: float 2.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .hero-char:nth-child(2) { animation-delay: 0.45s; }
+  .hero-char:nth-child(3) { animation-delay: 0.9s; }
+  .hero-char img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 
-  .full { grid-column: span 2; min-height: 110px; }
+  @keyframes float {
+    0%,100% { transform: translateY(0px); }
+    50%      { transform: translateY(-9px); }
+  }
 
+  /* ── 섹션 라벨 ── */
+  .section-label {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 18px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.28);
+    text-transform: uppercase;
+  }
+
+  /* ── 카드 그리드 ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 11px;
+    width: 100%;
+    max-width: 480px;
+    padding: 0 16px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    border: 1.5px solid rgba(255,255,255,0.09);
+    touch-action: manipulation;
+    transition: transform 0.11s, box-shadow 0.11s;
+    position: relative;
+    background: var(--bg);
+  }
+  .card:active { transform: scale(0.93); box-shadow: 0 3px 12px rgba(0,0,0,0.5); }
+
+  /* 이미지 영역 */
+  .img-wrap {
+    width: 100%;
+    height: 94px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(0,0,0,0.25);
+    flex-shrink: 0;
+  }
+  .img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 15%;
+  }
+  .img-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, var(--bg) 100%);
+  }
+  .emoji-only {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 46px;
+    height: 94px;
+    background: rgba(255,255,255,0.04);
+    flex-shrink: 0;
+  }
+
+  /* 텍스트 영역 */
+  .card-body {
+    padding: 4px 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+  .card-name {
+    font-size: 14.5px;
+    font-weight: 900;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .card-desc {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.55;
+  }
+
+  /* 개별 카드 색상 */
+  .c1 { --bg: #8B2200; }
+  .c2 { --bg: #0E5C56; }
+  .c3 { --bg: #3B2A90; }
+  .c4 { --bg: #8B1A40; }
+  .c5 { --bg: #1A5C25; }
+  .c6 { --bg: #7A3D00; }
+
+  /* 전폭 카드 (테트리스) */
+  .full {
+    grid-column: span 2;
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 100px;
+    --bg: #0F2470;
+  }
+  .full .img-wrap {
+    width: 120px;
+    height: auto;
+    flex-shrink: 0;
+    border-radius: 0;
+  }
+  .full .img-wrap img { object-position: center 20%; }
+  .full .img-wrap::after {
+    background: linear-gradient(to right, transparent 50%, var(--bg) 100%);
+  }
+  .full .card-body {
+    padding: 14px 16px 14px 10px;
+    justify-content: center;
+  }
+  .full .card-name { font-size: 16px; white-space: normal; }
+  .full .card-desc  { font-size: 12px; }
+
+  /* 새 규칙 배지 */
+  .badge-new {
+    display: inline-block;
+    background: #FFD700;
+    color: #000;
+    font-size: 9px;
+    font-weight: 900;
+    border-radius: 6px;
+    padding: 1px 6px;
+    margin-left: 5px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+
+  /* D-day 배지 */
   .day-badge {
-    margin-top: 24px; font-size: 13px; color: #888;
-    background: rgba(255,255,255,0.06); border-radius: 20px; padding: 6px 18px;
+    margin-top: 22px;
+    font-size: 13px;
+    color: #888;
+    background: rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 7px 20px;
+    letter-spacing: 0.3px;
   }
 </style>
 </head>
 <body>
-<div class="title-wrap">
-  <span class="title-emoji">🤖</span>
-  <h1>승한이 영어 게임!</h1>
-  <div class="sub">어떤 게임 할까요?</div>
+
+<!-- 히어로 -->
+<div class="hero">
+  <div class="hero-title">승한이 영어 게임! 🎮</div>
+  <div class="hero-sub">2026 영어 말하기 대회 준비 중 🏆</div>
+  <div class="hero-chars">
+    <div class="hero-char"><img src="images/08_woo_woo.png"        alt="소방관"></div>
+    <div class="hero-char"><img src="images/09_police.png"         alt="경찰관"></div>
+    <div class="hero-char"><img src="images/13_doctor_child.png"   alt="의사"></div>
+  </div>
 </div>
 
+<div class="section-label">게임 선택</div>
+
 <div class="grid">
+
   <a class="card c1" href="speech.html">
-    <span class="card-emoji">🎙️</span>
-    <span class="card-name">말하기 연습</span>
-    <span class="card-desc">영웅 대사<br>읽고 변신!</span>
+    <div class="img-wrap">
+      <img src="images/04_want_firefighter.png" alt="">
+    </div>
+    <div class="card-body">
+      <span class="card-name">🎙️ 말하기 연습</span>
+      <span class="card-desc">영웅 대사<br>읽고 변신!</span>
+    </div>
   </a>
+
   <a class="card c2" href="memory.html">
-    <span class="card-emoji">🃏</span>
-    <span class="card-name">메모리 게임</span>
-    <span class="card-desc">짝 맞추면<br>로봇 변신!</span>
+    <div class="img-wrap">
+      <img src="images/19_thank_you.png" alt="">
+    </div>
+    <div class="card-body">
+      <span class="card-name">🃏 메모리 게임</span>
+      <span class="card-desc">짝 맞추면<br>로봇 변신!</span>
+    </div>
   </a>
+
   <a class="card c3" href="balloon.html">
-    <span class="card-emoji">🎈</span>
-    <span class="card-name">풍선 터뜨리기</span>
-    <span class="card-desc">단어 듣고<br>풍선 터치!</span>
+    <div class="emoji-only">🎈</div>
+    <div class="card-body">
+      <span class="card-name">🎈 풍선 터뜨리기</span>
+      <span class="card-desc">단어 듣고<br>풍선 터치!</span>
+    </div>
   </a>
+
   <a class="card c4" href="quiz.html">
-    <span class="card-emoji">🦸</span>
-    <span class="card-name">영웅 퀴즈</span>
-    <span class="card-desc">그림 보고<br>단어 맞추기!</span>
+    <div class="img-wrap">
+      <img src="images/17_help_wide.png" alt="">
+    </div>
+    <div class="card-body">
+      <span class="card-name">🦸 영웅 퀴즈</span>
+      <span class="card-desc">그림 보고<br>단어 맞추기!</span>
+    </div>
   </a>
+
   <a class="card c5" href="fishing.html">
-    <span class="card-emoji">🎣</span>
-    <span class="card-name">단어 낚시</span>
-    <span class="card-desc">부르는 단어<br>물고기 잡기!</span>
+    <div class="img-wrap">
+      <img src="images/11_catch.png" alt="">
+    </div>
+    <div class="card-body">
+      <span class="card-name">🎣 단어 낚시</span>
+      <span class="card-desc">부르는 단어<br>물고기 잡기!</span>
+    </div>
   </a>
+
   <a class="card c6" href="story.html">
-    <span class="card-emoji">📖</span>
-    <span class="card-name">이야기 순서</span>
-    <span class="card-desc">그림 카드로<br>문장 순서 맞추기!</span>
+    <div class="img-wrap">
+      <img src="images/18_dream.png" alt="">
+    </div>
+    <div class="card-body">
+      <span class="card-name">📖 이야기 순서</span>
+      <span class="card-desc">그림 카드로<br>문장 순서!</span>
+    </div>
   </a>
-  <a class="card c7 full" href="tetris.html">
-    <span class="card-emoji">🧱</span>
-    <span class="card-name">영웅 블록 쌓기</span>
-    <span class="card-desc">블록 떨어지면<br>단어 듣고 쌓기!</span>
+
+  <a class="card full" href="tetris.html">
+    <div class="img-wrap">
+      <img src="images/06_help_people.png" alt="">
+    </div>
+    <div class="card-body">
+      <div class="card-name">🧱 영웅 블록 쌓기 <span class="badge-new">NEW</span></div>
+      <div class="card-desc">🔴빨강 🔵파랑 🟢초록<br>같은 색 3개 모으면 클리어!</div>
+    </div>
   </a>
+
 </div>
 
 <div class="day-badge" id="day-badge">대회까지 로딩 중...</div>

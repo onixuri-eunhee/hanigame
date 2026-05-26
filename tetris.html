@@ -104,7 +104,7 @@
 <div id="word-banner">
   <div id="cur-word-en">준비!</div>
   <div id="cur-word-ko">블록을 쌓아요</div>
-  <div id="goal-hint">🚒 소방관 + 👮 경찰 + 👨‍⚕️ 의사 = 줄 클리어!</div>
+  <div id="goal-hint">🔴빨강 🔵파랑 🟢초록 — 같은 색 3개 모으면 클리어!</div>
 </div>
 
 <div id="controls">
@@ -122,24 +122,27 @@
 </div>
 
 <script>
+// colorGroup: 'red'=소방관, 'blue'=경찰, 'green'=의사, 'white'=나머지
+const GROUP_COLOR = { red: '#FF3B3B', blue: '#3B7FFF', green: '#2ECC40', white: '#CCCCCC' };
+const GROUP_LABEL = { red: '🔴 소방관', blue: '🔵 경찰', green: '🟢 의사', white: '⚪ 기타' };
 const WORDS = [
-  { word: 'firefighter', ko: '소방관',   img: '08_woo_woo',           color: '#FF5722' },
-  { word: 'police',      ko: '경찰관',   img: '09_police',            color: '#1565C0' },
-  { word: 'doctor',      ko: '의사',     img: '13_doctor_child',      color: '#2E7D32' },
-  { word: 'brave',       ko: '용감한',   img: '05_brave_firefighter', color: '#E65100' },
-  { word: 'strong',      ko: '강한',     img: '10_strong',            color: '#283593' },
-  { word: 'kind',        ko: '친절한',   img: '14_doctors_kind',      color: '#00695C' },
-  { word: 'dream',       ko: '꿈',       img: '18_dream',             color: '#6A1B9A' },
-  { word: 'hero',        ko: '영웅',     img: '17_help_wide',         color: '#F9A825' },
-  { word: 'help',        ko: '돕다',     img: '06_help_people',       color: '#B71C1C' },
-  { word: 'save',        ko: '구하다',   img: '07_save_lives',        color: '#AD1457' },
-  { word: 'safe',        ko: '안전한',   img: '12_keep_safe',         color: '#1A237E' },
-  { word: 'thank you',   ko: '고마워요', img: '19_thank_you',         color: '#4E342E' },
+  { word: 'firefighter', ko: '소방관',   img: '08_woo_woo',           colorGroup: 'red'   },
+  { word: 'police',      ko: '경찰관',   img: '09_police',            colorGroup: 'blue'  },
+  { word: 'doctor',      ko: '의사',     img: '13_doctor_child',      colorGroup: 'green' },
+  { word: 'brave',       ko: '용감한',   img: '05_brave_firefighter', colorGroup: 'red'   },
+  { word: 'strong',      ko: '강한',     img: '10_strong',            colorGroup: 'blue'  },
+  { word: 'kind',        ko: '친절한',   img: '14_doctors_kind',      colorGroup: 'green' },
+  { word: 'dream',       ko: '꿈',       img: '18_dream',             colorGroup: 'white' },
+  { word: 'hero',        ko: '영웅',     img: '17_help_wide',         colorGroup: 'white' },
+  { word: 'help',        ko: '돕다',     img: '06_help_people',       colorGroup: 'red'   },
+  { word: 'save',        ko: '구하다',   img: '07_save_lives',        colorGroup: 'red'   },
+  { word: 'safe',        ko: '안전한',   img: '12_keep_safe',         colorGroup: 'blue'  },
+  { word: 'thank you',   ko: '고마워요', img: '19_thank_you',         colorGroup: 'white' },
 ];
 
 const COLS = 4;
 const ROWS = 7;
-const HEROES = ['firefighter', 'police', 'doctor'];
+const CLEAR_COUNT = 3; // 같은 색 3개 이상 → 클리어
 let CELL = 80;
 
 const canvas = document.getElementById('board-canvas');
@@ -230,11 +233,22 @@ function placeBlock() {
   checkLines();
 }
 
+function getRowClearGroup(r) {
+  // 해당 줄에서 가장 많이 등장한 colorGroup이 CLEAR_COUNT 이상이면 해당 그룹 반환
+  const cells = board[r].filter(Boolean);
+  if (cells.length < CLEAR_COUNT) return null;
+  const count = {};
+  cells.forEach(w => { count[w.colorGroup] = (count[w.colorGroup] || 0) + 1; });
+  const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] >= CLEAR_COUNT ? best[0] : null;
+}
+
 function checkLines() {
   const full = [];
+  const clearGroups = [];
   for (let r = 0; r < ROWS; r++) {
-    const rowWords = board[r].filter(Boolean).map(c => c.word);
-    if (HEROES.every(h => rowWords.includes(h))) full.push(r);
+    const g = getRowClearGroup(r);
+    if (g) { full.push(r); clearGroups.push(g); }
   }
   if (full.length === 0) { spawnBlock(); scheduleFall(); return; }
 
@@ -251,9 +265,9 @@ function checkLines() {
       document.getElementById('score-disp').textContent = `⭐ ${score}점`;
       document.getElementById('level-disp').textContent = `Lv.${level}`;
       spawnStars(12);
-      speak('Three heroes! Firefighter, police, doctor!');
+      const ttsMap = { red: 'Firefighter! Brave!', blue: 'Police! Strong!', green: 'Doctor! Kind!', white: 'Hero! Dream!' };
+      speak(ttsMap[clearGroups[0]] || 'Great!');
       draw();
-      // delay spawnBlock so hero phrase plays before next speak() cancels it
       setTimeout(() => { spawnBlock(); scheduleFall(); }, 1400);
     }
   }, 80);
@@ -287,7 +301,8 @@ function draw(flashRows = []) {
 
 function drawCell(x, y, word, flash, isFalling = false) {
   const pad = 3, r = 8;
-  ctx.fillStyle = flash ? 'rgba(255,255,255,0.95)' : (isFalling ? word.color + 'FF' : word.color + 'CC');
+  const baseColor = GROUP_COLOR[word.colorGroup] || '#AAAAAA';
+  ctx.fillStyle = flash ? 'rgba(255,255,255,0.95)' : (isFalling ? baseColor + 'FF' : baseColor + 'CC');
   ctx.beginPath(); roundRect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.fill();
   if (isFalling) { ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2.5; ctx.stroke(); }
 
