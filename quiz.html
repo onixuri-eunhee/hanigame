@@ -155,18 +155,18 @@
 
 <script>
 const WORDS = [
-  { word: 'firefighter',   emoji: '🚒', img: '08_woo_woo' },
-  { word: 'police officer',emoji: '👮', img: '09_police' },
-  { word: 'doctor',        emoji: '👨‍⚕️', img: '13_doctor_child' },
-  { word: 'brave',         emoji: '💪', img: '05_brave_firefighter' },
-  { word: 'strong',        emoji: '🦾', img: '10_strong' },
-  { word: 'kind',          emoji: '🤗', img: '14_doctors_kind' },
-  { word: 'dream',         emoji: '💭', img: '18_dream' },
-  { word: 'hero',          emoji: '🦸', img: '17_help_wide' },
-  { word: 'help',          emoji: '🤝', img: '06_help_people' },
-  { word: 'save',          emoji: '⛑️', img: '07_save_lives' },
-  { word: 'safe',          emoji: '🔒', img: '12_keep_safe' },
-  { word: 'thank you',     emoji: '🙏', img: '19_thank_you' },
+  { word: 'firefighter',   cat: 'fire',    emoji: '🚒', img: '08_woo_woo' },
+  { word: 'police officer',cat: 'police',  emoji: '👮', img: '09_police' },
+  { word: 'doctor',        cat: 'doctor',  emoji: '👨‍⚕️', img: '13_doctor_child' },
+  { word: 'brave',         cat: 'fire',    emoji: '💪', img: '05_brave_firefighter' },
+  { word: 'strong',        cat: 'police',  emoji: '🦾', img: '10_strong' },
+  { word: 'kind',          cat: 'doctor',  emoji: '🤗', img: '14_doctors_kind' },
+  { word: 'dream',         cat: 'general', emoji: '💭', img: '18_dream' },
+  { word: 'hero',          cat: 'general', emoji: '🦸', img: '17_help_wide' },
+  { word: 'help',          cat: 'fire',    emoji: '🤝', img: '06_help_people' },
+  { word: 'save',          cat: 'fire',    emoji: '⛑️', img: '07_save_lives' },
+  { word: 'safe',          cat: 'police',  emoji: '🔒', img: '12_keep_safe' },
+  { word: 'thank you',     cat: 'general', emoji: '🙏', img: '19_thank_you' },
 ];
 
 let score = 0, qIdx = 0, order = [], answerIdx = -1, answered = false;
@@ -282,8 +282,10 @@ function showQuestion() {
   document.getElementById('feedback').className = '';
 
   const target = order[qIdx];
-  // 3 distractors
-  const others = shuffle(WORDS.filter(w => w.word !== target.word)).slice(0, 3);
+  // Pick distractors from different categories first to avoid visual confusion
+  const diffCat = shuffle(WORDS.filter(w => w.word !== target.word && w.cat !== target.cat));
+  const sameCat = shuffle(WORDS.filter(w => w.word !== target.word && w.cat === target.cat));
+  const others  = [...diffCat, ...sameCat].slice(0, 3);
   const options = shuffle([target, ...others]);
   answerIdx = options.findIndex(o => o.word === target.word);
 
