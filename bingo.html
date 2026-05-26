@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>영웅 빙고</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #1A1A4E 0%, #0D0D1A 100%);
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 14px 28px;
+    color: #fff; overflow-x: hidden;
+  }
+
+  .header { text-align: center; margin-bottom: 10px; width: 100%; }
+  .title { font-size: 26px; font-weight: 900; color: #FFD700; text-shadow: 0 0 18px rgba(255,215,0,0.5); }
+  .header-row { display: flex; justify-content: center; gap: 12px; align-items: center; margin-top: 6px; }
+  #score-disp { font-size: 18px; font-weight: 900; color: #FFD700; }
+  #bingo-disp { font-size: 13px; color: #aaa; background: rgba(255,255,255,0.1); padding: 3px 12px; border-radius: 12px; }
+  .home-link { color: #a8dadc; border: 1.5px solid #a8dadc; border-radius: 50px; padding: 4px 14px; font-size: 12px; font-weight: 700; text-decoration: none; }
+
+  .caller {
+    background: rgba(255,255,255,0.07);
+    border-radius: 18px; border: 1.5px solid rgba(255,255,255,0.13);
+    padding: 10px 16px 12px; text-align: center;
+    width: 100%; max-width: 380px; margin-bottom: 10px;
+  }
+  .caller-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; text-transform: uppercase; }
+  #called-word { font-size: 26px; font-weight: 900; color: #FFD700; min-height: 34px; letter-spacing: 0.5px; margin-top: 2px; }
+  #called-ko   { font-size: 13px; color: #aaa; margin-top: 1px; }
+
+  .btn-row { display: flex; gap: 10px; width: 100%; max-width: 380px; margin-bottom: 12px; }
+  .btn {
+    flex: 1; padding: 13px 0;
+    border: none; border-radius: 50px;
+    font-size: 15px; font-weight: 900;
+    cursor: pointer; touch-action: manipulation;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.93); }
+  .btn-repeat { background: rgba(255,255,255,0.12); color: #fff; border: 1.5px solid rgba(255,255,255,0.2); }
+  .btn-next   { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; }
+
+  #bingo-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 9px; width: 100%; max-width: 380px;
+  }
+  .cell {
+    background: rgba(255,255,255,0.07);
+    border-radius: 16px; border: 2px solid rgba(255,255,255,0.11);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px 4px 7px;
+    touch-action: manipulation; cursor: pointer;
+    transition: transform 0.1s, background 0.2s, border-color 0.2s;
+    aspect-ratio: 1; position: relative; overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  }
+  .cell:active:not(.marked) { transform: scale(0.92); }
+  .cell img { width: 62%; aspect-ratio: 1; object-fit: contain; pointer-events: none; }
+  .cell-word { font-size: 9.5px; font-weight: 900; color: rgba(255,255,255,0.75); text-align: center; margin-top: 4px; line-height: 1.2; }
+
+  .cell.marked {
+    background: rgba(255,215,0,0.18); border-color: #FFD700;
+    box-shadow: 0 0 14px rgba(255,215,0,0.35);
+  }
+  .cell.marked::after { content: '✅'; position: absolute; top: 3px; right: 5px; font-size: 15px; }
+
+  .cell.bingo-line {
+    background: rgba(255,100,0,0.32); border-color: #FF7B00;
+    animation: pulse 0.7s ease-in-out infinite alternate;
+  }
+  @keyframes pulse {
+    from { box-shadow: 0 0 10px rgba(255,123,0,0.4); }
+    to   { box-shadow: 0 0 26px rgba(255,123,0,0.85); }
+  }
+
+  .cell.wrong { animation: shake 0.3s; border-color: #FF4444 !important; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; z-index: 99;
+    text-align: center; padding: 20px;
+  }
+  #overlay.show { display: flex; }
+  #ov-emoji { font-size: 68px; }
+  #ov-title { font-size: 30px; font-weight: 900; color: #FFD700; }
+  #ov-score { font-size: 16px; color: #ccc; margin-top: 2px; }
+  .ov-btn { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; border: none; border-radius: 50px; padding: 16px 44px; font-size: 20px; font-weight: 900; cursor: pointer; margin-top: 8px; touch-action: manipulation; }
+  .home-link-sm { display: inline-block; margin-top: 6px; color: #a8dadc; border: 2px solid #a8dadc; border-radius: 50px; padding: 10px 28px; font-size: 15px; font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">🎯 영웅 빙고!</div>
+  <div class="header-row">
+    <div id="score-disp">⭐ 0점</div>
+    <div id="bingo-disp">빙고 0줄</div>
+    <a class="home-link" href="index.html">← 홈</a>
+  </div>
+</div>
+
+<div class="caller">
+  <div class="caller-label">이 단어를 찾아봐요!</div>
+  <div id="called-word">?</div>
+  <div id="called-ko">준비 중...</div>
+</div>
+
+<div class="btn-row">
+  <button class="btn btn-repeat" onclick="repeatWord()">🔊 다시 듣기</button>
+  <button class="btn btn-next"   onclick="skipWord()">다음 단어 ▶</button>
+</div>
+
+<div id="bingo-grid"></div>
+
+<div id="overlay">
+  <div id="ov-emoji">🎉</div>
+  <div id="ov-title">BINGO!</div>
+  <div id="ov-score"></div>
+  <button class="ov-btn" onclick="startGame()">다시 하기 🔄</button>
+  <a class="home-link-sm" href="index.html">← 게임 선택</a>
+</div>
+
+<script>
+const WORDS = [
+  { word: 'firefighter', ko: '소방관',   img: '08_woo_woo'           },
+  { word: 'police',      ko: '경찰관',   img: '09_police'            },
+  { word: 'doctor',      ko: '의사',     img: '13_doctor_child'      },
+  { word: 'brave',       ko: '용감한',   img: '05_brave_firefighter' },
+  { word: 'strong',      ko: '강한',     img: '10_strong'            },
+  { word: 'kind',        ko: '친절한',   img: '14_doctors_kind'      },
+  { word: 'heal',        ko: '치료하다', img: '16_feel_better'       },
+  { word: 'dream',       ko: '꿈',       img: '18_dream'             },
+  { word: 'hero',        ko: '영웅',     img: '17_help_wide'         },
+  { word: 'help',        ko: '돕다',     img: '06_help_people'       },
+  { word: 'save',        ko: '구하다',   img: '07_save_lives'        },
+  { word: 'safe',        ko: '안전한',   img: '12_keep_safe'         },
+  { word: 'thank you',   ko: '고마워요', img: '19_thank_you'         },
+];
+
+// 3×3 빙고 줄 정의 (인덱스 0~8)
+const BINGO_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],  // 가로
+  [0,3,6],[1,4,7],[2,5,8],  // 세로
+  [0,4,8],[2,4,6],          // 대각선
+];
+
+let board = [];        // 보드에 배치된 9개 단어
+let callOrder = [];    // 호출 순서 (셔플된 board 복사본)
+let callIdx = 0;       // 현재 호출 인덱스
+let marked = new Set();       // 표시된 셀 인덱스
+let triggeredLines = new Set(); // 이미 빙고 처리된 줄 번호
+let score = 0;
+let gameActive = false;
+
+// ── Audio / TTS ───────────────────────────────────────────────────────
+let _ac = null, audioUnlocked = false, pendingSpeak = null;
+
+function getAC() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+
+function snd(type) {
+  try {
+    const ac = getAC();
+    if (type === 'bingo') {
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.frequency.value = freq;
+        const t = ac.currentTime + i * 0.13;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.22, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        o.start(t); o.stop(t + 0.5);
+      });
+      return;
+    }
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    if (type === 'correct') {
+      osc.frequency.value = 880;
+      g.gain.setValueAtTime(0.18, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
+    } else {
+      osc.type = 'sawtooth'; osc.frequency.value = 150;
+      g.gain.setValueAtTime(0.1, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+    }
+    osc.start(); osc.stop(ac.currentTime + 0.4);
+  } catch(e) {}
+}
+
+function _unlockAll() {
+  try {
+    getAC().resume();
+    if (window.speechSynthesis) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    audioUnlocked = true;
+    document.removeEventListener('touchstart', _unlockAll);
+    document.removeEventListener('click', _unlockAll);
+    if (pendingSpeak) { const w = pendingSpeak; pendingSpeak = null; speak(w); }
+  } catch(e) {}
+}
+document.addEventListener('touchstart', _unlockAll, { passive: true });
+document.addEventListener('click', _unlockAll);
+
+if (window.speechSynthesis) speechSynthesis.getVoices();
+function speak(word) {
+  if (!window.speechSynthesis) return;
+  if (!audioUnlocked) { pendingSpeak = word; return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.2;
+  const vs = speechSynthesis.getVoices();
+  const best = vs.find(v => v.name === 'Samantha') || vs.find(v => v.lang === 'en-US' && v.localService);
+  if (best) u.voice = best;
+  speechSynthesis.speak(u);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Game Init ─────────────────────────────────────────────────────────
+function startGame() {
+  board = shuffle([...WORDS]).slice(0, 9);
+  callOrder = shuffle([...board]);
+  callIdx = 0;
+  marked = new Set();
+  triggeredLines = new Set();
+  score = 0;
+  gameActive = true;
+  document.getElementById('score-disp').textContent = '⭐ 0점';
+  document.getElementById('bingo-disp').textContent = '빙고 0줄';
+  document.getElementById('overlay').classList.remove('show');
+  renderBoard();
+  setTimeout(callNext, 700);
+}
+
+function renderBoard() {
+  const grid = document.getElementById('bingo-grid');
+  grid.innerHTML = '';
+  board.forEach((word, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.id = `cell-${i}`;
+    cell.innerHTML = `<img src="images/${word.img}.png" alt="${word.word}">
+                      <div class="cell-word">${word.word}</div>`;
+    cell.addEventListener('click', () => onCellTap(i));
+    cell.addEventListener('touchstart', e => { e.preventDefault(); onCellTap(i); }, { passive: false });
+    grid.appendChild(cell);
+  });
+}
+
+// ── Round ─────────────────────────────────────────────────────────────
+function callNext() {
+  if (!gameActive) return;
+  if (callIdx >= callOrder.length) { showResult(false); return; }
+  const w = callOrder[callIdx];
+  document.getElementById('called-word').textContent = w.word;
+  document.getElementById('called-ko').textContent = w.ko;
+  speak(w.word);
+}
+
+function repeatWord() {
+  if (callIdx >= callOrder.length) return;
+  speak(callOrder[callIdx].word);
+}
+
+function skipWord() {
+  if (!gameActive || callIdx >= callOrder.length) return;
+  callIdx++;
+  callNext();
+}
+
+// ── Tap Handler ───────────────────────────────────────────────────────
+function onCellTap(i) {
+  if (!gameActive || marked.has(i) || callIdx >= callOrder.length) return;
+  const target = callOrder[callIdx];
+  const cell = document.getElementById(`cell-${i}`);
+
+  if (board[i].word === target.word) {
+    marked.add(i);
+    score++;
+    snd('correct');
+    speak(target.word);
+    cell.classList.add('marked');
+    document.getElementById('score-disp').textContent = `⭐ ${score}점`;
+
+    const newBingos = getNewBingoLines();
+    if (newBingos.length > 0) {
+      newBingos.forEach(line => line.forEach(idx => {
+        document.getElementById(`cell-${idx}`).classList.add('bingo-line');
+      }));
+      const totalBingos = triggeredLines.size;
+      document.getElementById('bingo-disp').textContent = `빙고 ${totalBingos}줄`;
+      snd('bingo');
+      speak('Bingo!');
+      gameActive = false;
+      setTimeout(() => showResult(true), 1300);
+      return;
+    }
+
+    callIdx++;
+    setTimeout(callNext, 1100);
+  } else {
+    snd('wrong');
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 350);
+  }
+}
+
+// 새로 완성된 빙고 줄 반환, triggeredLines 업데이트
+function getNewBingoLines() {
+  const newLines = [];
+  BINGO_LINES.forEach((line, li) => {
+    if (!triggeredLines.has(li) && line.every(i => marked.has(i))) {
+      triggeredLines.add(li);
+      newLines.push(line);
+    }
+  });
+  return newLines;
+}
+
+function showResult(isBingo) {
+  gameActive = false;
+  document.getElementById('ov-emoji').textContent = isBingo ? '🎉' : '🏅';
+  document.getElementById('ov-title').textContent = isBingo ? 'BINGO! 🌟' : '다 했어요!';
+  document.getElementById('ov-score').textContent = `⭐ ${score}점 · ${marked.size}칸 완성`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+window.addEventListener('load', startGame);
+</script>
+</body>
+</html>
