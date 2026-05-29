@@ -662,6 +662,10 @@ function startMiniGame(idx) {
   const ctx = canvas.getContext('2d');
   if (mgRAF) { cancelAnimationFrame(mgRAF); mgRAF = null; }
   startBGMusic(idx);
+  // 하단 버튼 라벨 기본값 복원 (doctorMG가 바꾼 뒤 다른 게임에 영향 없도록)
+  document.getElementById('btn-left').textContent  = '◀';
+  document.getElementById('btn-space').textContent = '✊';
+  document.getElementById('btn-right').textContent = '▶';
   [fireFighterMG, policeMG, doctorMG][idx](canvas, ctx);
 }
 
@@ -848,43 +852,96 @@ function policeMG(canvas, ctx) {
 
 function doctorMG(canvas, ctx) {
   const W=canvas.width, H=canvas.height;
-  document.getElementById('mg-title').textContent='❤️ 환자 치료! (SPACE=대시)';
-  const player={x:W/2,y:H-55,spd:5,lean:0,bounce:0};
-  let patients=[],healBeams=[],hp=0,timer=40,last=performance.now(),st=0,bgPulse=0,ended=false;
+  document.getElementById('mg-title').textContent='🧠 치료 순서 따라하기!';
+  // 하단 버튼을 치료 3종으로 변신
+  document.getElementById('btn-left').textContent  = '💊';
+  document.getElementById('btn-space').textContent = '🩹';
+  document.getElementById('btn-right').textContent = '💉';
 
-  function loop(now) {
+  // 치료 3종: 0=약, 1=밴드, 2=주사 (버튼 left/space/right 와 대응)
+  const TREAT=[
+    {emoji:'💊', word:'pill',    color:'#4CAF50', freq:523},
+    {emoji:'🩹', word:'bandage', color:'#FFC107', freq:659},
+    {emoji:'💉', word:'shot',    color:'#29B6F6', freq:784},
+  ];
+  const KEY=['left','space','right'];
+  const WIN_STAGE=5;
+
+  function tone(freq){
+    try{
+      const ac=getAC(), t=ac.currentTime;
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(0.25,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+      o.start(t); o.stop(t+0.32);
+    }catch(e){}
+  }
+
+  let sequence=[Math.floor(Math.random()*3)];
+  let stage=1, mode='show';
+  let showIdx=0, showT=0;          // 보여주기 진행
+  let inputIdx=0;                  // 따라하기 진행
+  let flash=-1, flashT=0;          // 현재 강조 버튼 + 잔광
+  let pauseT=0.8;                  // 단계 시작 전 잠깐 대기
+  let prev=[false,false,false];
+  let last=performance.now(), bgPulse=0, ended=false;
+
+  function startShow(){ mode='show'; showIdx=0; showT=0; inputIdx=0; }
+
+  function loop(now){
     if(ended) return;
     const dt=Math.min((now-last)/1000,0.05); last=now;
-    timer-=dt; st+=dt; bgPulse+=dt*2;
-    if(timer<=0||hp>=100){ended=true; mgEndGame(`❤️ ${hp}% 회복!<br><small>${hp>=100?'완벽해요! 💯':'잘했어요!'}</small>`); return;}
+    bgPulse+=dt*2;
+    if(flashT>0) flashT-=dt;
 
-    const spd=mgKeys.space?9:5;
-    if(mgKeys.left)  {player.x=Math.max(20,player.x-spd); player.lean=Math.max(player.lean-dt*12,-0.35);}
-    if(mgKeys.right) {player.x=Math.min(W-20,player.x+spd); player.lean=Math.min(player.lean+dt*12,0.35);}
-    if(!mgKeys.left&&!mgKeys.right) player.lean*=0.85;
-    player.bounce=Math.sin(bgPulse*2)*2;
-
-    if(st>2.5&&patients.length<4){
-      const fromLeft=Math.random()>0.5;
-      patients.push({x:fromLeft?-20:W+20,y:H-50+(Math.random()-0.5)*30,spd:fromLeft?0.5:-0.5,wave:0,healed:false});
-      st=0;
-    }
-    patients.forEach(p=>{p.x+=p.spd; p.wave+=dt*3;});
-    const dScale=Math.max(1.6,W/220);
-    const hitR2=28+W*0.04;
-    patients=patients.filter(p=>{
-      if(!p.healed&&Math.abs(p.x-player.x)<hitR2&&Math.abs(p.y-player.y)<hitR2){
-        hp=Math.min(100,hp+12); p.healed=true;
-        burst(p.x,p.y,'#E91E63',12); burst(p.x,p.y,'#FFD700',6);
-        addCombo(p.x,p.y); spawnStars(2);
-        healBeams.push({x1:player.x,y1:player.y,x2:p.x,y2:p.y,life:0.5});
+    if(mode==='pause'){
+      pauseT-=dt;
+      if(pauseT<=0) startShow();
+    } else if(mode==='show'){
+      showT-=dt;
+      if(showT<=0){
+        if(showIdx<sequence.length){
+          flash=sequence[showIdx]; flashT=0.45; tone(TREAT[flash].freq);
+          showIdx++; showT=0.65;          // 강조 0.45s + 간격 0.2s
+        } else {
+          mode='input'; flash=-1;
+        }
       }
-      return p.x>-80&&p.x<W+80;
-    });
-    healBeams.forEach(b=>b.life-=dt*2);
-    healBeams=healBeams.filter(b=>b.life>0);
+    } else if(mode==='input'){
+      // 버튼 rising-edge 감지
+      for(let k=0;k<3;k++){
+        const down=!!mgKeys[KEY[k]];
+        if(down&&!prev[k]){
+          flash=k; flashT=0.35; tone(TREAT[k].freq);
+          if(k===sequence[inputIdx]){
+            inputIdx++;
+            burst(W/2,H*0.42,TREAT[k].color,10); addCombo(W/2,H*0.42);
+            if(inputIdx>=sequence.length){
+              // 단계 클리어
+              spawnStars(4);
+              if(stage>=WIN_STAGE){
+                ended=true; prev[k]=down;
+                mgEndGame(`🏆 ${WIN_STAGE}단계 완성!<br><small>기억력 천재! 🧠✨</small>`);
+                return;
+              }
+              stage++; sequence.push(Math.floor(Math.random()*3));
+              mode='pause'; pauseT=0.9;
+            }
+          } else {
+            // 오답 → 종료
+            ended=true; prev[k]=down; shake(); snd('hit');
+            burst(W/2,H*0.42,'#F44336',12);
+            mgEndGame(`💪 ${stage}단계까지!<br><small>잘했어요, 또 도전!</small>`);
+            return;
+          }
+        }
+        prev[k]=down;
+      }
+    }
     updateP(dt); updateF(dt); updateCombo(dt);
 
+    // ── 그리기 ──
     ctx.save(); applyShake(ctx,dt);
     const bg=ctx.createLinearGradient(0,0,0,H);
     bg.addColorStop(0,'#040F08'); bg.addColorStop(1,'#080F04');
@@ -892,29 +949,73 @@ function doctorMG(canvas, ctx) {
     const pulse=0.06+Math.abs(Math.sin(bgPulse))*0.04;
     ctx.fillStyle=`rgba(46,125,50,${pulse})`;
     for(let gx=20;gx<W;gx+=50) for(let gy=20;gy<H;gy+=50){ctx.fillRect(gx-2,gy-8,4,16);ctx.fillRect(gx-8,gy-2,16,4);}
-    ctx.fillStyle='#0A1A0A'; ctx.fillRect(0,H-8,W,8);
 
-    healBeams.forEach(b=>{
-      ctx.save(); ctx.globalAlpha=b.life; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=3;
-      ctx.shadowColor='#4CAF50'; ctx.shadowBlur=12;
-      ctx.beginPath(); ctx.moveTo(b.x1,b.y1); ctx.lineTo(b.x2,b.y2); ctx.stroke(); ctx.restore();
-    });
-    patients.forEach(p=>{ctx.font=`${Math.round(24*dScale)}px serif`;ctx.fillText(p.healed?'😊':'🤒',p.x-12*dScale,p.y+6);});
-    ctx.save();ctx.translate(player.x,player.y+player.bounce);ctx.rotate(player.lean);ctx.font=`${Math.round(30*dScale)}px serif`;ctx.fillText('👨‍⚕️',-15*dScale,0);ctx.restore();
+    const dScale=Math.max(1.4,W/240);
+    // 의사 + 안내
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=`${Math.round(34*dScale)}px serif`;
+    ctx.fillText('👨‍⚕️', W/2, 40*dScale);
+    ctx.fillStyle='#FFD700'; ctx.font=`bold ${Math.round(13*dScale)}px Arial`;
+    ctx.fillText(`단계 ${stage} / ${WIN_STAGE}`, W/2, 52*dScale);
+    ctx.fillStyle='#A5D6A7'; ctx.font=`bold ${Math.round(12*dScale)}px Arial`;
+    const guide = mode==='input' ? '🖐 똑같이 따라 눌러!' :
+                  mode==='show'  ? '👀 잘 봐!' : '준비…';
+    ctx.fillText(guide, W/2, 66*dScale);
+
+    // 중앙: 보여주기 중 강조 emoji — 또렷하게 (배경 원 + 거의 불투명, 끝에만 살짝 페이드)
+    if(mode!=='input' && flash>=0 && flashT>0){
+      ctx.globalAlpha=Math.min(1, flashT/0.12);   // 마지막 0.12s만 페이드, 그 외 불투명
+      const cx=W/2, cy=H*0.42, rad=42*dScale;
+      // 흰 배경 원 + 치료색 테두리 → 텍스처 위에서도 선명
+      ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
+      ctx.fillStyle='#FFFFFF'; ctx.fill();
+      ctx.lineWidth=4; ctx.strokeStyle=TREAT[flash].color; ctx.stroke();
+      ctx.font=`${Math.round(52*dScale)}px serif`;
+      ctx.fillText(TREAT[flash].emoji, cx, cy);
+      ctx.globalAlpha=1;
+    }
+    // 입력 진행 점
+    ctx.fillStyle='#4CAF50';
+    const dots=sequence.length, gap=14*dScale, x0=W/2-(dots-1)*gap/2;
+    for(let i=0;i<dots;i++){
+      ctx.globalAlpha = i<inputIdx ? 1 : 0.25;
+      ctx.beginPath(); ctx.arc(x0+i*gap, H*0.58, 4*dScale, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    // 하단 치료 버튼 3개
+    const bw=W/3.4, bh=Math.min(H*0.22, 70*dScale), by=H-bh-12, gapB=(W-bw*3)/4;
+    for(let k=0;k<3;k++){
+      const bx=gapB+(bw+gapB)*k;
+      const on=(flash===k && flashT>0);
+      ctx.fillStyle = on ? TREAT[k].color : '#10301A';
+      ctx.strokeStyle = TREAT[k].color; ctx.lineWidth=2;
+      roundRect(ctx,bx,by,bw,bh,12); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#fff';
+      ctx.font=`${Math.round(28*dScale)}px serif`;
+      ctx.fillText(TREAT[k].emoji, bx+bw/2, by+bh*0.5);
+      ctx.font=`bold ${Math.round(11*dScale)}px Arial`;
+      ctx.fillStyle = on ? '#fff' : '#A5D6A7';
+      ctx.fillText(TREAT[k].word, bx+bw/2, by+bh-8);
+    }
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     drawP(ctx); drawF(ctx); drawCombo(ctx,W);
-
-    ctx.fillStyle='#1A2A1A'; ctx.fillRect(8,8,W-16,14);
-    ctx.fillStyle=hp>60?'#4CAF50':hp>30?'#FF9800':'#F44336';
-    ctx.fillRect(8,8,(W-16)*hp/100,14);
-    ctx.strokeStyle='#333'; ctx.strokeRect(8,8,W-16,14);
-    ctx.fillStyle='#fff'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
-    ctx.fillText(`❤️ ${hp}%`,W/2,19); ctx.textAlign='left';
-    ctx.fillStyle='#FFD700'; ctx.font='bold 14px Arial';
-    ctx.fillText(`⏱ ${Math.ceil(timer)}s`,W-55,22);
     ctx.restore();
     mgRAF=requestAnimationFrame(loop);
   }
+  mode='pause'; pauseT=0.8;
   mgRAF=requestAnimationFrame(loop);
+}
+
+// 둥근 사각형 (캔버스 버튼용)
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
 }
 
 // ── IOS AUDIO UNLOCK ──────────────────────────────────────────────────
