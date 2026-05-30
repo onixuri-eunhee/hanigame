@@ -905,38 +905,40 @@ function doctorMG(canvas, ctx) {
           flash=sequence[showIdx]; flashT=0.45; tone(TREAT[flash].freq);
           showIdx++; showT=0.65;          // 강조 0.45s + 간격 0.2s
         } else {
+          // 따라하기 시작: 지금 눌려있는 버튼은 '새 입력'으로 치지 않게 prev 동기화
           mode='input'; flash=-1;
+          for(let k=0;k<3;k++) prev[k]=!!mgKeys[KEY[k]];
         }
       }
     } else if(mode==='input'){
-      // 버튼 rising-edge 감지
-      for(let k=0;k<3;k++){
-        const down=!!mgKeys[KEY[k]];
-        if(down&&!prev[k]){
-          flash=k; flashT=0.35; tone(TREAT[k].freq);
-          if(k===sequence[inputIdx]){
-            inputIdx++;
-            burst(W/2,H*0.42,TREAT[k].color,10); addCombo(W/2,H*0.42);
-            if(inputIdx>=sequence.length){
-              // 단계 클리어
-              spawnStars(4);
-              if(stage>=WIN_STAGE){
-                ended=true; prev[k]=down;
-                mgEndGame(`🏆 ${WIN_STAGE}단계 완성!<br><small>기억력 천재! 🧠✨</small>`);
-                return;
-              }
-              stage++; sequence.push(Math.floor(Math.random()*3));
-              mode='pause'; pauseT=0.9;
+      // 이번 프레임에 '새로' 눌린 버튼 수집 (rising-edge)
+      const pressed=[];
+      for(let k=0;k<3;k++){ const down=!!mgKeys[KEY[k]]; if(down&&!prev[k]) pressed.push(k); prev[k]=down; }
+      if(pressed.length){
+        // 동시 터치 보호: 정답 버튼이 섞여 있으면 정답을 우선 채택
+        const k = pressed.includes(sequence[inputIdx]) ? sequence[inputIdx] : pressed[0];
+        flash=k; flashT=0.35; tone(TREAT[k].freq);
+        if(k===sequence[inputIdx]){
+          inputIdx++;
+          burst(W/2,H*0.42,TREAT[k].color,10); addCombo(W/2,H*0.42);
+          if(inputIdx>=sequence.length){
+            // 단계 클리어
+            spawnStars(4);
+            if(stage>=WIN_STAGE){
+              ended=true;
+              mgEndGame(`🏆 ${WIN_STAGE}단계 완성!<br><small>기억력 천재! 🧠✨</small>`);
+              return;
             }
-          } else {
-            // 오답 → 종료
-            ended=true; prev[k]=down; shake(); snd('hit');
-            burst(W/2,H*0.42,'#F44336',12);
-            mgEndGame(`💪 ${stage}단계까지!<br><small>잘했어요, 또 도전!</small>`);
-            return;
+            stage++; sequence.push(Math.floor(Math.random()*3));
+            mode='pause'; pauseT=0.9;
           }
+        } else {
+          // 오답 → 종료
+          ended=true; shake(); snd('hit');
+          burst(W/2,H*0.42,'#F44336',12);
+          mgEndGame(`💪 ${stage}단계까지!<br><small>잘했어요, 또 도전!</small>`);
+          return;
         }
-        prev[k]=down;
       }
     }
     updateP(dt); updateF(dt); updateCombo(dt);
@@ -962,8 +964,8 @@ function doctorMG(canvas, ctx) {
                   mode==='show'  ? '👀 잘 봐!' : '준비…';
     ctx.fillText(guide, W/2, 66*dScale);
 
-    // 중앙: 보여주기 중 강조 emoji — 또렷하게 (배경 원 + 거의 불투명, 끝에만 살짝 페이드)
-    if(mode!=='input' && flash>=0 && flashT>0){
+    // 중앙 강조 emoji — 보여주기/따라하기 둘 다 (배경 원 + 거의 불투명, 끝에만 살짝 페이드)
+    if(flash>=0 && flashT>0){
       ctx.globalAlpha=Math.min(1, flashT/0.12);   // 마지막 0.12s만 페이드, 그 외 불투명
       const cx=W/2, cy=H*0.42, rad=42*dScale;
       // 흰 배경 원 + 치료색 테두리 → 텍스처 위에서도 선명
