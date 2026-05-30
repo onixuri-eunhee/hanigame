@@ -408,8 +408,27 @@ canvas.addEventListener('mouseup',    ()=>{ if(G) G.finger=null; });
 
 document.getElementById('hint-btn').addEventListener('click', ()=>{ if(G && G.signs) speak(G.hero.word); });
 
-// onArrive: Task 7에서 채움(임시 빈 함수)
-function onArrive(){ /* Task 7 */ }
+function onArrive(){
+  const hero = G.hero;
+  spawnSpark();
+  document.getElementById('ar-hero').textContent = hero.goal;
+  document.getElementById('ar-en').textContent = hero.en;
+  document.getElementById('ar-ko').textContent = hero.ko;
+  document.getElementById('arrival').classList.add('show');
+  speak(hero.en);
+}
+function nextLevel(){
+  document.getElementById('arrival').classList.remove('show');
+  const next = G.levelIdx + 1;
+  if(next >= HEROES.length){ showCelebration(); return; }
+  startLevel(next, null);
+}
+function showCelebration(){ document.getElementById('celebration').classList.add('show'); }
+function replayAll(){ document.getElementById('celebration').classList.remove('show'); startLevel(0, null); }
+
+document.getElementById('ar-next').addEventListener('click', nextLevel);
+document.getElementById('ar-say').addEventListener('click', ()=>{ if(G) speak(G.hero.en); });
+document.getElementById('ar-replay').addEventListener('click', replayAll);
 
 window.__maze.startLevel = startLevel;
 window.__maze._state = () => G;
@@ -419,6 +438,10 @@ window.__maze.setFinger = setFinger;
 window.__maze.tick = tickMove;
 window.__maze._forceDraw = () => drawFrame();
 window.__maze._onboardingVisible = () => !!(G && G._onbShown);
+window.__maze._next = nextLevel;
+
+// 첫 진입: 1판 시작
+startLevel(0, null);
 </script>
 </body>
 </html>
