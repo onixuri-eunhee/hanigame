@@ -179,7 +179,7 @@ function pruneDeadEnds(cells, n, cap, rnd){
     let nb = openNeighbors(cells, n, v);
     if(nb.length!==1) continue;
     let chain=[v], cur=v, came=-1, len=1;
-    while(true){
+    while(len<=n*n){   // 상한: 버스트로 생긴 사이클에 빠져도 무한루프 방지
       const ns = openNeighbors(cells, n, cur).filter(x=>x!==came);
       if(ns.length!==1) break;
       came=cur; cur=ns[0]; chain.push(cur); len++;
@@ -236,7 +236,7 @@ function sizeCanvas(n){
   const wrap = document.getElementById('maze-wrap');
   DPR = window.devicePixelRatio || 1;
   const availW = wrap.clientWidth - 8, availH = wrap.clientHeight - 8;
-  const cell = Math.floor(Math.min(availW, availH) / n);
+  const cell = Math.max(12, Math.floor(Math.min(availW, availH) / n));  // 하한: 0/음수 → NaN 좌표 방지
   const px = cell * n;
   canvas.style.width = px + 'px'; canvas.style.height = px + 'px';
   canvas.width = px * DPR; canvas.height = px * DPR;
@@ -327,31 +327,41 @@ function drawFrame(){
 
 // ── 입력 → finger(셀 좌표) ──
 function pxToCell(x,y){
-  const c = Math.floor(x / G.cell), r = Math.floor(y / G.cell);
-  if(r<0||c<0||r>=G.n||c>=G.n) return null;
+  // 가장자리 살짝 벗어나도 끊기지 않게 칸 범위로 클램프
+  const c = Math.min(G.n-1, Math.max(0, Math.floor(x / G.cell)));
+  const r = Math.min(G.n-1, Math.max(0, Math.floor(y / G.cell)));
   return r*G.n + c;
 }
 function setFinger(x,y){ if(!G) return; G.finger = pxToCell(x,y); G.idle = 0; }
 
 function cellsAdjacentOpen(v){ return openNeighbors(G.cells, G.n, v); }
+function cellDist(a,b){ const ar=Math.floor(a/G.n),ac=a%G.n, br=Math.floor(b/G.n),bc=b%G.n; return Math.abs(ar-br)+Math.abs(ac-bc); }
+function stepTo(c){
+  const existing = G.trail.indexOf(c);
+  if(existing>=0){ G.trail.length = existing+1; } else { G.trail.push(c); }
+  G.player = c; afterMove();
+}
 
-// 한 tick: 손가락 칸 기준 1칸 이동
+// 한 tick: 손가락 칸 기준 이동 (너그러운 자동 따라가기)
 function tickMove(){
   if(!G || G.arrived) return;
   const f = G.finger;
   if(f==null) return;
   const pv = G.player;
   if(f===pv) return;
+  // 되돌리기: 손가락이 직전 칸
   if(G.trail.length>=2 && f===G.trail[G.trail.length-2]){
     G.trail.pop(); G.player = f; afterMove(); return;
   }
   const open = cellsAdjacentOpen(pv);
-  if(open.includes(f)){
-    const existing = G.trail.indexOf(f);
-    if(existing>=0){ G.trail.length = existing+1; }
-    else { G.trail.push(f); }
-    G.player = f; afterMove(); return;
-  }
+  // 손가락이 인접 열린 칸이면 그 칸으로
+  if(open.includes(f)){ stepTo(f); return; }
+  // 손가락이 멀리 있어도, 일직선 통로(분기 아님)면 손가락 쪽으로 한 칸 자동 전진.
+  // 분기(선택지 2+)에선 멈춰 손가락이 직접 들어오길 기다림(갈림길 커밋 유지).
+  const prev = G.trail.length>=2 ? G.trail[G.trail.length-2] : -1;
+  const fwd = open.filter(c=>c!==prev);
+  if(fwd.length===1 && cellDist(fwd[0], f) < cellDist(pv, f)){ stepTo(fwd[0]); return; }
+  // 그 외(분기·벽·뒤쪽): 제자리
 }
 
 function enterCellFork(){
@@ -367,14 +377,16 @@ function enterCellFork(){
     });
     G.signs = { cell:G.player, items };
     G.activeFork = fork;
-    speak(G.hero.word);
+    if(!fork.taught){ fork.taught = true; speak(G.hero.word); }  // 분기 최초 1회만 자동 발화(흔들기 스팸 방지, 🔊로 재청취)
   }
 }
 function afterMove(){
   // 분기 칸을 떠나면(전진이든 후진이든) 표지판 해제. 정답 통로로 떠났으면 보상.
   if(G.activeFork && G.player!==G.activeFork.cell){
     const taken = G.signs && G.signs.items.find(s=>s.branch===G.player);
-    if(taken && taken.correct){ spawnSpark(); speak(G.hero.word); }
+    if(taken && taken.correct && !G.activeFork.rewarded){
+      G.activeFork.rewarded = true; spawnSpark(); speak(G.hero.word);   // 분기당 1회만(흔들기 파밍 방지)
+    }
     G.signs=null; G.activeFork=null;
   }
   enterCellFork();
