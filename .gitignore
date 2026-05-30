@@ -7,3 +7,9 @@ _bmad-output/
 
 # Local Netlify folder
 .netlify
+
+# maze test scratch
+.maze_test_lib.mjs
+.maze_t*.mjs
+.maze_shot.mjs
+.maze-shot.png
