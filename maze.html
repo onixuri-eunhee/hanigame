@@ -275,6 +275,7 @@ function startLevel(levelIdx, seed){
   document.getElementById('arrival').classList.remove('show');
   document.getElementById('celebration').classList.remove('show');
   drawFrame();
+  startLoop();
 }
 
 function drawFrame(){
@@ -295,10 +296,71 @@ function drawFrame(){
   ctx.fillText('🤖', pp.x, pp.y);
 }
 
+// ── 입력 → finger(셀 좌표) ──
+function pxToCell(x,y){
+  const c = Math.floor(x / G.cell), r = Math.floor(y / G.cell);
+  if(r<0||c<0||r>=G.n||c>=G.n) return null;
+  return r*G.n + c;
+}
+function setFinger(x,y){ if(!G) return; G.finger = pxToCell(x,y); G.idle = 0; }
+
+function cellsAdjacentOpen(v){ return openNeighbors(G.cells, G.n, v); }
+
+// 한 tick: 손가락 칸 기준 1칸 이동
+function tickMove(){
+  if(!G || G.arrived) return;
+  const f = G.finger;
+  if(f==null) return;
+  const pv = G.player;
+  if(f===pv) return;
+  if(G.trail.length>=2 && f===G.trail[G.trail.length-2]){
+    G.trail.pop(); G.player = f; afterMove(); return;
+  }
+  const open = cellsAdjacentOpen(pv);
+  if(open.includes(f)){
+    const existing = G.trail.indexOf(f);
+    if(existing>=0){ G.trail.length = existing+1; }
+    else { G.trail.push(f); }
+    G.player = f; afterMove(); return;
+  }
+}
+
+function afterMove(){
+  if(G.player===G.goal){ G.arrived = true; onArrive(); }
+}
+
+// rAF 루프
+let rafId=null, lastT=0;
+function loop(t){
+  const dt = Math.min((t-lastT)/1000, 0.05); lastT=t;
+  if(G && !G.arrived){ G.idle += dt; tickMove(); }
+  drawFrame();
+  rafId = requestAnimationFrame(loop);
+}
+function startLoop(){ if(!rafId) rafId = requestAnimationFrame(loop); }
+
+function evtCell(e){
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  if(!t) return null;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const p=evtCell(e); if(p) setFinger(p.x,p.y); }, {passive:false});
+canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); const p=evtCell(e); if(p) setFinger(p.x,p.y); }, {passive:false});
+canvas.addEventListener('touchend',   e=>{ e.preventDefault(); if(G) G.finger=null; }, {passive:false});
+canvas.addEventListener('mousedown',  e=>{ const p=evtCell(e); if(p) setFinger(p.x,p.y); });
+canvas.addEventListener('mousemove',  e=>{ if(e.buttons){ const p=evtCell(e); if(p) setFinger(p.x,p.y); } });
+canvas.addEventListener('mouseup',    ()=>{ if(G) G.finger=null; });
+
+// onArrive: Task 7에서 채움(임시 빈 함수)
+function onArrive(){ /* Task 7 */ }
+
 window.__maze.startLevel = startLevel;
 window.__maze._state = () => G;
 window.__maze._sampleWall = () => {
   const g = mazeCache.getContext('2d'); const d = g.getImageData(2*DPR, 1*DPR, 1, 1).data; return d[0]+d[1]+d[2]; };
+window.__maze.setFinger = setFinger;
+window.__maze.tick = tickMove;
 </script>
 </body>
 </html>
