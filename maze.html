@@ -393,6 +393,18 @@ function loop(t){
 }
 function startLoop(){ if(!rafId) rafId = requestAnimationFrame(loop); }
 
+// 화면 회전/리사이즈: 현재 판 상태 유지하며 셀 크기·캐시만 재계산
+let resizeT=null;
+function onResize(){
+  if(!G) return;
+  const { cell, px } = sizeCanvas(G.n);
+  G.cell = cell; G.px = px;
+  buildMazeCache();
+  drawFrame();
+}
+window.addEventListener('resize', ()=>{ clearTimeout(resizeT); resizeT=setTimeout(onResize, 120); });
+window.addEventListener('orientationchange', ()=>{ clearTimeout(resizeT); resizeT=setTimeout(onResize, 120); });
+
 function evtCell(e){
   const rect = canvas.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
