@@ -501,12 +501,16 @@ function getAC() {
   if (_ac.state === 'suspended') _ac.resume();
   return _ac;
 }
-function snd(type) {
+function snd(type, freq) {
   try {
     const ctx = getAC(), t = ctx.currentTime;
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
-    if (type === 'collect') {
+    if (type === 'tone') {
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.3);
+      o.start(t); o.stop(t+0.32);
+    } else if (type === 'collect') {
       o.type = 'sine';
       o.frequency.setValueAtTime(523, t); o.frequency.exponentialRampToValueAtTime(1047, t+0.12);
       g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.2);
@@ -867,25 +871,25 @@ function doctorMG(canvas, ctx) {
   const KEY=['left','space','right'];
   const WIN_STAGE=5;
 
-  function tone(freq){
-    try{
-      const ac=getAC(), t=ac.currentTime;
-      const o=ac.createOscillator(), g=ac.createGain();
-      o.connect(g); g.connect(ac.destination);
-      o.type='sine'; o.frequency.value=freq;
-      g.gain.setValueAtTime(0.25,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
-      o.start(t); o.stop(t+0.32);
-    }catch(e){}
-  }
-
+  // 단계 수 = sequence.length (파생). 화면/판정 모두 이걸 사용.
   let sequence=[Math.floor(Math.random()*3)];
-  let stage=1, mode='show';
+  let mode='pause';                // pause→show→input 반복
   let showIdx=0, showT=0;          // 보여주기 진행
   let inputIdx=0;                  // 따라하기 진행
   let flash=-1, flashT=0;          // 현재 강조 버튼 + 잔광
   let pauseT=0.8;                  // 단계 시작 전 잠깐 대기
   let prev=[false,false,false];
   let last=performance.now(), bgPulse=0, ended=false;
+
+  // 세션 동안 캔버스 크기 고정 → 프레임마다 안 바뀌는 값은 1회 계산
+  const dScale=Math.max(1.4,W/240);
+  const bgGrad=ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,'#040F08'); bgGrad.addColorStop(1,'#080F04');
+  const bw=W/3.4, bh=Math.min(H*0.22,70*dScale), by=H-bh-12, gapB=(W-bw*3)/4;
+  // 의료 십자 격자 배경 1회만 오프스크린 렌더(매 프레임 ~700 fillRect 제거)
+  const gridCv=document.createElement('canvas'); gridCv.width=W; gridCv.height=H;
+  const gctx=gridCv.getContext('2d'); gctx.fillStyle='rgb(46,125,50)';
+  for(let gx=20;gx<W;gx+=50) for(let gy=20;gy<H;gy+=50){gctx.fillRect(gx-2,gy-8,4,16);gctx.fillRect(gx-8,gy-2,16,4);}
 
   function startShow(){ mode='show'; showIdx=0; showT=0; inputIdx=0; }
 
@@ -902,7 +906,7 @@ function doctorMG(canvas, ctx) {
       showT-=dt;
       if(showT<=0){
         if(showIdx<sequence.length){
-          flash=sequence[showIdx]; flashT=0.45; tone(TREAT[flash].freq);
+          flash=sequence[showIdx]; flashT=0.45; snd('tone',TREAT[flash].freq);
           showIdx++; showT=0.65;          // 강조 0.45s + 간격 0.2s
         } else {
           // 따라하기 시작: 지금 눌려있는 버튼은 '새 입력'으로 치지 않게 prev 동기화
@@ -917,26 +921,26 @@ function doctorMG(canvas, ctx) {
       if(pressed.length){
         // 동시 터치 보호: 정답 버튼이 섞여 있으면 정답을 우선 채택
         const k = pressed.includes(sequence[inputIdx]) ? sequence[inputIdx] : pressed[0];
-        flash=k; flashT=0.35; tone(TREAT[k].freq);
+        flash=k; flashT=0.35; snd('tone',TREAT[k].freq);
         if(k===sequence[inputIdx]){
           inputIdx++;
           burst(W/2,H*0.42,TREAT[k].color,10); addCombo(W/2,H*0.42);
           if(inputIdx>=sequence.length){
             // 단계 클리어
             spawnStars(4);
-            if(stage>=WIN_STAGE){
+            if(sequence.length>=WIN_STAGE){
               ended=true;
               mgEndGame(`🏆 ${WIN_STAGE}단계 완성!<br><small>기억력 천재! 🧠✨</small>`);
               return;
             }
-            stage++; sequence.push(Math.floor(Math.random()*3));
+            sequence.push(Math.floor(Math.random()*3));
             mode='pause'; pauseT=0.9;
           }
         } else {
           // 오답 → 종료
           ended=true; shake(); snd('hit');
           burst(W/2,H*0.42,'#F44336',12);
-          mgEndGame(`💪 ${stage}단계까지!<br><small>잘했어요, 또 도전!</small>`);
+          mgEndGame(`💪 ${sequence.length}단계까지!<br><small>잘했어요, 또 도전!</small>`);
           return;
         }
       }
@@ -945,20 +949,16 @@ function doctorMG(canvas, ctx) {
 
     // ── 그리기 ──
     ctx.save(); applyShake(ctx,dt);
-    const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#040F08'); bg.addColorStop(1,'#080F04');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
     const pulse=0.06+Math.abs(Math.sin(bgPulse))*0.04;
-    ctx.fillStyle=`rgba(46,125,50,${pulse})`;
-    for(let gx=20;gx<W;gx+=50) for(let gy=20;gy<H;gy+=50){ctx.fillRect(gx-2,gy-8,4,16);ctx.fillRect(gx-8,gy-2,16,4);}
+    ctx.globalAlpha=pulse; ctx.drawImage(gridCv,0,0); ctx.globalAlpha=1;
 
-    const dScale=Math.max(1.4,W/240);
     // 의사 + 안내
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.font=`${Math.round(34*dScale)}px serif`;
     ctx.fillText('👨‍⚕️', W/2, 40*dScale);
     ctx.fillStyle='#FFD700'; ctx.font=`bold ${Math.round(13*dScale)}px Arial`;
-    ctx.fillText(`단계 ${stage} / ${WIN_STAGE}`, W/2, 52*dScale);
+    ctx.fillText(`단계 ${sequence.length} / ${WIN_STAGE}`, W/2, 52*dScale);
     ctx.fillStyle='#A5D6A7'; ctx.font=`bold ${Math.round(12*dScale)}px Arial`;
     const guide = mode==='input' ? '🖐 똑같이 따라 눌러!' :
                   mode==='show'  ? '👀 잘 봐!' : '준비…';
@@ -985,8 +985,7 @@ function doctorMG(canvas, ctx) {
     }
     ctx.globalAlpha=1;
 
-    // 하단 치료 버튼 3개
-    const bw=W/3.4, bh=Math.min(H*0.22, 70*dScale), by=H-bh-12, gapB=(W-bw*3)/4;
+    // 하단 치료 버튼 3개 (geometry는 위에서 1회 계산)
     for(let k=0;k<3;k++){
       const bx=gapB+(bw+gapB)*k;
       const on=(flash===k && flashT>0);
@@ -1005,7 +1004,6 @@ function doctorMG(canvas, ctx) {
     ctx.restore();
     mgRAF=requestAnimationFrame(loop);
   }
-  mode='pause'; pauseT=0.8;
   mgRAF=requestAnimationFrame(loop);
 }
 
