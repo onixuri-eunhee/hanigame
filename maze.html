@@ -117,6 +117,9 @@ function mulberry32(seed){ let t = seed >>> 0; return function(){
   t += 0x6D2B79F5; let x = Math.imul(t ^ (t>>>15), 1 | t);
   x ^= x + Math.imul(x ^ (x>>>7), 61 | x); return ((x ^ (x>>>14)) >>> 0) / 4294967296; }; }
 
+// 방향 테이블(단일 출처): dr, dc, 현재칸 벽비트, 이웃칸 반대벽비트. N1 E2 S4 W8.
+const DIRS4 = [[-1,0,1,4],[0,1,2,8],[1,0,4,1],[0,-1,8,2]];
+
 // ── 완벽미로 생성 (재귀 백트래커, 반복 스택) ──
 // 반환: 길이 n*n 배열, 각 원소 = 벽 비트마스크 {N:1,E:2,S:4,W:8}
 function genMaze(n, seed){
@@ -125,12 +128,11 @@ function genMaze(n, seed){
   const cells = new Array(n*n).fill(15); // 처음엔 사방 벽
   const visited = new Array(n*n).fill(false);
   const stack = [0]; visited[0] = true;
-  const DIRS = [[-1,0,1,4],[0,1,2,8],[1,0,4,1],[0,-1,8,2]]; // dr,dc,bit,opp
   while(stack.length){
     const v = stack[stack.length-1];
     const r = Math.floor(v/n), c = v%n;
     const opts = [];
-    for(const [dr,dc,bit,opp] of DIRS){
+    for(const [dr,dc,bit,opp] of DIRS4){
       const nr=r+dr, nc=c+dc;
       if(nr<0||nc<0||nr>=n||nc>=n) continue;
       if(!visited[idx(nr,nc)]) opts.push([nr,nc,bit,opp]);
@@ -151,11 +153,10 @@ function solvePath(cells, n, start, goal){
   const prev = new Array(n*n).fill(-1);
   const seen = new Array(n*n).fill(false);
   const q=[start]; seen[start]=true;
-  const DIRS=[[-1,0,1],[0,1,2],[1,0,4],[0,-1,8]];
   while(q.length){
     const v=q.shift(); if(v===goal) break;
     const r=Math.floor(v/n),c=v%n, w=cells[v];
-    for(const [dr,dc,bit] of DIRS){ if(w&bit) continue;
+    for(const [dr,dc,bit] of DIRS4){ if(w&bit) continue;
       const nr=r+dr,nc=c+dc; if(nr<0||nc<0||nr>=n||nc>=n) continue;
       const u=idx(nr,nc); if(!seen[u]){seen[u]=true;prev[u]=v;q.push(u);} }
   }
@@ -166,8 +167,7 @@ function solvePath(cells, n, start, goal){
 // ── 열린 이웃 목록 ──
 function openNeighbors(cells, n, v){
   const r=Math.floor(v/n),c=v%n, w=cells[v], out=[];
-  const DIRS=[[-1,0,1],[0,1,2],[1,0,4],[0,-1,8]];
-  for(const [dr,dc,bit] of DIRS){ if(w&bit) continue;
+  for(const [dr,dc,bit] of DIRS4){ if(w&bit) continue;
     const nr=r+dr,nc=c+dc; if(nr<0||nc<0||nr>=n||nc>=n) continue; out.push(nr*n+nc); }
   return out;
 }
@@ -190,7 +190,7 @@ function pruneDeadEnds(cells, n, cap, rnd){
     if(len>cap){
       const cell = chain[cap];
       const r=Math.floor(cell/n),c=cell%n;
-      const cand=[[-1,0,1,4],[0,1,2,8],[1,0,4,1],[0,-1,8,2]]
+      const cand=DIRS4
         .map(([dr,dc,bit,opp])=>({nr:r+dr,nc:c+dc,bit,opp}))
         .filter(o=>o.nr>=0&&o.nc>=0&&o.nr<n&&o.nc<n && (cells[cell]&o.bit));
       if(cand.length){ const o=cand[Math.floor(rnd()*cand.length)];
@@ -264,16 +264,17 @@ function buildMazeCache(){
 
 function cellCenter(v){ const c=v%G.n, r=Math.floor(v/G.n); return { x:(c+0.5)*G.cell, y:(r+0.5)*G.cell }; }
 
+let seedNonce = 0;
 function startLevel(levelIdx, seed){
   const hero = HEROES[levelIdx];
   const n = hero.n;
   const { cell, px } = sizeCanvas(n);
-  const lvl = buildLevel(n, seed != null ? seed : (1000 + levelIdx*777 + Math.floor((window.__seedNonce=(window.__seedNonce||0)+1))));
+  const baseSeed = seed != null ? seed : (1000 + levelIdx*777 + (++seedNonce));
+  const lvl = buildLevel(n, baseSeed);
   G = { levelIdx, hero, n, cell, px, cells: lvl.cells, path: lvl.path, forks: lvl.forks,
         player: 0, goal: n*n-1, trail: [0], finger: null, arrived: false,
-        idle: 0, signs: null, activeFork: null };
+        idle: 0, signs: null, activeFork: null, _onbSpoke: false };
   buildMazeCache();
-  G.signs=null; G.activeFork=null; G._onbSpoke=false;
   sparks=[];   // 이전 판 반짝이 잔재 제거
   document.getElementById('level-disp').textContent = `단계 ${levelIdx+1} / 3`;
   document.getElementById('arrival').classList.remove('show');
@@ -402,7 +403,8 @@ let rafId=null, lastT=0;
 function loop(t){
   const dt = Math.min((t-lastT)/1000, 0.05); lastT=t;
   if(G && !G.arrived){ G.idle += dt; tickMove(); }
-  drawFrame();
+  // 도착 후(축하/도착카드 표시 중) 반짝이까지 끝났으면 캔버스 정적 → 매 프레임 재렌더 생략
+  if(!(G && G.arrived && sparks.length===0)) drawFrame();
   rafId = requestAnimationFrame(loop);
 }
 function startLoop(){ if(!rafId) rafId = requestAnimationFrame(loop); }
@@ -457,15 +459,14 @@ document.getElementById('ar-next').addEventListener('click', nextLevel);
 document.getElementById('ar-say').addEventListener('click', ()=>{ if(G) speak(G.hero.en); });
 document.getElementById('ar-replay').addEventListener('click', replayAll);
 
-window.__maze.startLevel = startLevel;
-window.__maze._state = () => G;
-window.__maze._sampleWall = () => {
-  const g = mazeCache.getContext('2d'); const d = g.getImageData(2*DPR, 1*DPR, 1, 1).data; return d[0]+d[1]+d[2]; };
-window.__maze.setFinger = setFinger;
-window.__maze.tick = tickMove;
-window.__maze._forceDraw = () => drawFrame();
-window.__maze._onboardingVisible = () => !!(G && G._onbShown);
-window.__maze._next = nextLevel;
+// 런타임 + 테스트 하니스 훅
+Object.assign(window.__maze, {
+  startLevel, setFinger, tick: tickMove, _next: nextLevel,
+  _state: () => G,
+  _forceDraw: () => drawFrame(),
+  _onboardingVisible: () => !!(G && G._onbShown),
+  _sampleWall: () => { const g = mazeCache.getContext('2d'); const d = g.getImageData(2*DPR, 1*DPR, 1, 1).data; return d[0]+d[1]+d[2]; },
+});
 
 // 첫 진입: 1판 시작
 startLevel(0, null);
