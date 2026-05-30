@@ -274,6 +274,7 @@ function startLevel(levelIdx, seed){
         idle: 0, signs: null, activeFork: null };
   buildMazeCache();
   G.signs=null; G.activeFork=null; G._onbSpoke=false;
+  sparks=[];   // 이전 판 반짝이 잔재 제거
   document.getElementById('level-disp').textContent = `단계 ${levelIdx+1} / 3`;
   document.getElementById('arrival').classList.remove('show');
   document.getElementById('celebration').classList.remove('show');
@@ -370,8 +371,9 @@ function enterCellFork(){
   }
 }
 function afterMove(){
-  if(G.signs && G.activeFork && G.activeFork.cell===G.trail[G.trail.length-2]){
-    const taken = G.signs.items.find(s=>s.branch===G.player);
+  // 분기 칸을 떠나면(전진이든 후진이든) 표지판 해제. 정답 통로로 떠났으면 보상.
+  if(G.activeFork && G.player!==G.activeFork.cell){
+    const taken = G.signs && G.signs.items.find(s=>s.branch===G.player);
     if(taken && taken.correct){ spawnSpark(); speak(G.hero.word); }
     G.signs=null; G.activeFork=null;
   }
@@ -430,6 +432,7 @@ function onArrive(){
   speak(hero.en);
 }
 function nextLevel(){
+  if(!G || !G.arrived) return;   // 더블탭으로 판 건너뛰기 방지
   document.getElementById('arrival').classList.remove('show');
   const next = G.levelIdx + 1;
   if(next >= HEROES.length){ showCelebration(); return; }
