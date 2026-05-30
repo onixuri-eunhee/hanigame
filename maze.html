@@ -143,7 +143,87 @@ function genMaze(n, seed){
   return cells;
 }
 
-window.__maze = { mulberry32, genMaze, N:1, E:2, S:4, W:8 };
+// ── BFS 해답경로 ──
+function solvePath(cells, n, start, goal){
+  const idx=(r,c)=>r*n+c;
+  const prev = new Array(n*n).fill(-1);
+  const seen = new Array(n*n).fill(false);
+  const q=[start]; seen[start]=true;
+  const DIRS=[[-1,0,1],[0,1,2],[1,0,4],[0,-1,8]];
+  while(q.length){
+    const v=q.shift(); if(v===goal) break;
+    const r=Math.floor(v/n),c=v%n, w=cells[v];
+    for(const [dr,dc,bit] of DIRS){ if(w&bit) continue;
+      const nr=r+dr,nc=c+dc; if(nr<0||nc<0||nr>=n||nc>=n) continue;
+      const u=idx(nr,nc); if(!seen[u]){seen[u]=true;prev[u]=v;q.push(u);} }
+  }
+  const path=[]; let cur=goal; while(cur!==-1){ path.unshift(cur); cur=prev[cur]; }
+  return path;
+}
+
+// ── 열린 이웃 목록 ──
+function openNeighbors(cells, n, v){
+  const r=Math.floor(v/n),c=v%n, w=cells[v], out=[];
+  const DIRS=[[-1,0,1],[0,1,2],[1,0,4],[0,-1,8]];
+  for(const [dr,dc,bit] of DIRS){ if(w&bit) continue;
+    const nr=r+dr,nc=c+dc; if(nr<0||nc<0||nr>=n||nc>=n) continue; out.push(nr*n+nc); }
+  return out;
+}
+
+// ── 막다른길 단축: 막다른 가지가 cap 초과면 벽 하나 터서 단축 ──
+function pruneDeadEnds(cells, n, cap, rnd){
+  for(let v=0; v<n*n; v++){
+    if(v===0 || v===n*n-1) continue;
+    let nb = openNeighbors(cells, n, v);
+    if(nb.length!==1) continue;
+    let chain=[v], cur=v, came=-1, len=1;
+    while(true){
+      const ns = openNeighbors(cells, n, cur).filter(x=>x!==came);
+      if(ns.length!==1) break;
+      came=cur; cur=ns[0]; chain.push(cur); len++;
+      if(cur===0||cur===n*n-1) break;
+      const deg = openNeighbors(cells, n, cur).length;
+      if(deg>2) break;
+    }
+    if(len>cap){
+      const cell = chain[cap];
+      const r=Math.floor(cell/n),c=cell%n;
+      const cand=[[-1,0,1,4],[0,1,2,8],[1,0,4,1],[0,-1,8,2]]
+        .map(([dr,dc,bit,opp])=>({nr:r+dr,nc:c+dc,bit,opp}))
+        .filter(o=>o.nr>=0&&o.nc>=0&&o.nr<n&&o.nc<n && (cells[cell]&o.bit));
+      if(cand.length){ const o=cand[Math.floor(rnd()*cand.length)];
+        cells[cell]&=~o.bit; cells[o.nr*n+o.nc]&=~o.opp; }
+    }
+  }
+}
+
+// ── 해답경로 상의 분기(들어온 칸 제외 열린 이웃 ≥2) ──
+function forksOnPath(cells, n, path){
+  const out=[];
+  for(let i=0;i<path.length-1;i++){
+    const v=path[i]; const prev = i>0 ? path[i-1] : -1;
+    const nb = openNeighbors(cells, n, v).filter(x=>x!==prev);
+    if(nb.length>=2) out.push({ cell:v, next:path[i+1], branches:nb });
+  }
+  return out;
+}
+
+// ── 한 판 구성: 최소 분기 3개 보장 ──
+function buildLevel(n, seed){
+  const cap = 3;
+  for(let s=seed; s<seed+50; s++){
+    const cells = genMaze(n, s);
+    pruneDeadEnds(cells, n, cap, mulberry32(s ^ 0x9e3779b9));
+    const path = solvePath(cells, n, 0, n*n-1);
+    const forks = forksOnPath(cells, n, path);
+    if(forks.length>=3) return { cells, path, forks, seed:s };
+  }
+  const cells = genMaze(n, seed); pruneDeadEnds(cells, n, cap, mulberry32(seed));
+  const path = solvePath(cells, n, 0, n*n-1);
+  return { cells, path, forks: forksOnPath(cells, n, path), seed };
+}
+
+window.__maze = { mulberry32, genMaze, solvePath, openNeighbors, pruneDeadEnds, forksOnPath, buildLevel, N:1, E:2, S:4, W:8 };
 </script>
 </body>
 </html>
