@@ -23,7 +23,7 @@
   #hint-btn { font-size: 20px; background: rgba(255,255,255,0.1);
     border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; }
   #maze-wrap { flex: 1; position: relative; display: flex;
-    align-items: center; justify-content: center; padding-bottom: 124px; }
+    align-items: center; justify-content: center; }
   #maze-canvas { display: block; touch-action: none; }
   .screen { position: absolute; inset: 0; display: none;
     flex-direction: column; align-items: center; justify-content: center;
@@ -158,6 +158,9 @@ function mulberry32(seed){ let t = seed >>> 0; return function(){
   t += 0x6D2B79F5; let x = Math.imul(t ^ (t>>>15), 1 | t);
   x ^= x + Math.imul(x ^ (x>>>7), 61 | x); return ((x ^ (x>>>14)) >>> 0) / 4294967296; }; }
 
+// ── 시드 셔플 (Fisher-Yates, 제자리) ──
+function shuffle(arr, rnd){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
 // 방향 테이블(단일 출처): dr, dc, 현재칸 벽비트, 이웃칸 반대벽비트. N1 E2 S4 W8.
 const DIRS4 = [[-1,0,1,4],[0,1,2,8],[1,0,4,1],[0,-1,8,2]];
 
@@ -272,11 +275,13 @@ window.__maze = { mulberry32, genMaze, solvePath, openNeighbors, pruneDeadEnds, 
 let G = null;
 let mazeCache = null;
 let DPR = 1;
+const TRAY_RESERVE = 124;   // 하단 카드 트레이 높이(단일 출처: CSS padding + 캔버스 가용높이 동시 적용)
 
 function sizeCanvas(n){
   const wrap = document.getElementById('maze-wrap');
   DPR = window.devicePixelRatio || 1;
-  const availW = wrap.clientWidth - 8, availH = wrap.clientHeight - 8 - 124;  // 하단 카드 트레이 공간 예약
+  wrap.style.paddingBottom = TRAY_RESERVE + 'px';
+  const availW = wrap.clientWidth - 8, availH = wrap.clientHeight - 8 - TRAY_RESERVE;
   const cell = Math.max(12, Math.floor(Math.min(availW, availH) / n));  // 하한: 0/음수 → NaN 좌표 방지
   const px = cell * n;
   canvas.style.width = px + 'px'; canvas.style.height = px + 'px';
@@ -397,12 +402,13 @@ function tickMove(){
     G.trail.pop(); G.player = f; afterMove(); return;
   }
   // 분기 카드 게이트: 분기 활성 + 카드 미선택이면 전진 전면 차단
-  if(G.activeFork && G.activeFork.cell===pv && G.unlockedBranch==null) return;
+  const atFork = G.activeFork && G.activeFork.cell===pv;
+  if(atFork && G.unlockedBranch==null) return;
   const open = cellsAdjacentOpen(pv);
   // 손가락이 인접 열린 칸이면 그 칸으로
   if(open.includes(f)){
     // 분기에서는 카드로 연 갈래로만 진입 허용
-    if(G.activeFork && G.activeFork.cell===pv && f!==G.unlockedBranch) return;
+    if(atFork && f!==G.unlockedBranch) return;
     stepTo(f); return;
   }
   // 손가락이 멀리 있어도, 일직선 통로(분기 아님)면 손가락 쪽으로 한 칸 자동 전진.
@@ -417,8 +423,7 @@ function enterCellFork(){
   const fork = G.forks.find(f=>f.cell===G.player);
   if(fork && (!G.signs || G.signs.cell!==G.player)){
     const rnd = mulberry32(G.player*131 + G.levelIdx*7 + 1);
-    const pool = DISTRACTORS.filter(d=>d[0]!==G.hero.goal).slice();
-    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    const pool = shuffle(DISTRACTORS.filter(d=>d[0]!==G.hero.goal), rnd);
     const items = fork.branches.map(br=>{
       if(br===fork.next) return { branch:br, emoji:G.hero.goal, word:G.hero.word, correct:true };
       const d = pool.pop() || ['❓','box'];
@@ -428,9 +433,7 @@ function enterCellFork(){
     G.activeFork = fork;
     G.unlockedBranch = null;                 // 카드 선택 전까지 잠금
     // 카드 트레이는 표지판 순서와 다르게 셔플해 노출(매칭 난이도)
-    const order = items.slice();
-    for(let i=order.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
-    showCardTray(order);
+    showCardTray(shuffle(items.slice(), rnd));
     if(!fork.taught){ fork.taught = true; speak(G.hero.word); }  // 분기 최초 1회만 자동 발화(흔들기 스팸 방지, 🔊로 재청취)
   }
 }
