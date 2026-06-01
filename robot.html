@@ -84,13 +84,6 @@ h1 {
 }
 .robot-stage.shimmer { animation: shimmer 0.9s ease-out; }
 
-@keyframes transform-spin {
-  0%   { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
-  40%  { transform: scale(1.15) rotate(10deg);  filter: brightness(2.5) hue-rotate(90deg); }
-  70%  { transform: scale(1.15) rotate(-10deg); filter: brightness(3) hue-rotate(180deg); }
-  100% { transform: scale(1)    rotate(0deg);   filter: brightness(1.4) drop-shadow(0 0 14px #FFD700); }
-}
-.robot-stage.transform-anim { animation: transform-spin 1.3s ease-in-out forwards; }
 
 .star {
   position: absolute; font-size: 1.4rem; pointer-events: none;
@@ -124,10 +117,6 @@ h1 {
   padding: 20px 22px;
   box-shadow: 0 0 20px #FFD70033;
   transition: transform 0.4s ease, opacity 0.4s ease;
-}
-.card-current.fly-out {
-  transform: translateY(-80px);
-  opacity: 0;
 }
 .card-current .num { font-size: 0.7rem; color: #888; margin-bottom: 6px; }
 .card-current .sentence-text {
@@ -163,10 +152,6 @@ h1 {
   padding: 12px 18px;
   opacity: 0.6;
   transition: transform 0.4s ease, opacity 0.4s ease;
-}
-.card-upcoming.slide-up {
-  transform: translateY(-100%);
-  opacity: 0;
 }
 .card-upcoming .num { font-size: 0.65rem; color: #555; }
 .card-upcoming .sentence-text { font-size: 0.95rem; color: #aaa; line-height: 1.4; }
@@ -254,7 +239,7 @@ const UNLOCK_AT = {
   7:  { covers: ['cover-torso'],               label: '🛡 몸통 완성!' },
   10: { covers: ['cover-arm-l','cover-arm-r'], label: '💪 팔 완성!' },
   13: { covers: ['cover-legs'],                label: '🦵 다리 완성!' },
-  16: { covers: [],                            label: '⚡ 변신 완료!' }
+  16: { label: '⚡ 변신 완료!' }
 };
 
 let current = 0;
@@ -283,37 +268,24 @@ function speak(text) {
   } catch(e) {}
 }
 
-function playSuccess() {
+function playTones(freqs, type, gain, spacing, stopDelta, closeDelay) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [523, 659, 784].forEach((f, i) => {
+    freqs.forEach((f, i) => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = f; o.type = 'sine';
-      const t = ctx.currentTime + i * 0.13;
-      g.gain.setValueAtTime(0.28, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-      o.start(t); o.stop(t + 0.25);
+      o.frequency.value = f; o.type = type;
+      const t = ctx.currentTime + i * spacing;
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + stopDelta);
+      o.start(t); o.stop(t + stopDelta + 0.03);
     });
-    setTimeout(() => ctx.close(), 600);
+    setTimeout(() => ctx.close(), closeDelay);
   } catch(e) {}
 }
 
-function playTransform() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [261,329,392,523,659,784,1047].forEach((f, i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = f; o.type = 'square';
-      const t = ctx.currentTime + i * 0.09;
-      g.gain.setValueAtTime(0.14, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-      o.start(t); o.stop(t + 0.2);
-    });
-    setTimeout(() => ctx.close(), 1500);
-  } catch(e) {}
-}
+function playSuccess()   { playTones([523,659,784],           'sine',   0.28, 0.13, 0.22, 600);  }
+function playTransform() { playTones([261,329,392,523,659,784,1047], 'square', 0.14, 0.09, 0.18, 1500); }
 
 /* ── RENDER ── */
 function renderQueue() {
@@ -361,7 +333,7 @@ function advance() {
   clearTimeout(_initSpeakTimer);
 
   playSuccess();
-  try { speechSynthesis.cancel(); } catch(e) {}
+  speechSynthesis.cancel();
 
   current++;
   updateProgress();
@@ -372,18 +344,13 @@ function advance() {
     document.getElementById('partLabel').textContent = UNLOCK_AT[current].label;
     if (current === SENTENCES.length) {
       playTransform();
-      setTimeout(() => {
-        const img = document.getElementById('robotImg');
-        const vid = document.getElementById('robotVideo');
-        img.style.transition = 'opacity 0.6s';
-        img.style.opacity = '0';
-        setTimeout(() => {
-          img.style.display = 'none';
-          vid.style.display = 'block';
-          vid.play().catch(() => {});
-        }, 600);
-        setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 2500);
-      }, 300);
+      const img = document.getElementById('robotImg');
+      const vid = document.getElementById('robotVideo');
+      img.style.transition = 'opacity 0.6s';
+      img.style.opacity = '0';
+      setTimeout(() => { img.style.display = 'none'; vid.style.display = 'block'; vid.play().catch(() => {}); }, 600);
+      setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 2800);
+      _advancing = false;
       return;
     }
   }
@@ -418,7 +385,7 @@ function revealPart(coverId) {
     s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
     s.style.setProperty('--dy', (Math.random() * 100 - 60) + 'px');
     s.style.animationDelay = (Math.random() * 0.3) + 's';
-    document.getElementById('robotStage').appendChild(s);
+    stage.appendChild(s);
     setTimeout(() => s.remove(), 1200);
   }
 }
@@ -442,11 +409,11 @@ function restart() {
     document.getElementById(id).classList.remove('hidden');
   });
   const stage = document.getElementById('robotStage');
-  stage.classList.remove('transform-anim', 'shimmer');
+  stage.classList.remove('shimmer');
   const vid = document.getElementById('robotVideo');
   const img = document.getElementById('robotImg');
   vid.pause(); vid.style.display = 'none';
-  img.style.display = 'block'; img.style.opacity = '1';
+  img.style.display = 'block'; img.style.opacity = '1'; img.style.transition = '';
   renderQueue();
 }
 
