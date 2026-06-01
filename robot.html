@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Assembly — Speech Hero</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a1a;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+h1 {
+  color: #FFD700;
+  font-size: 1.5rem;
+  margin: 14px 0 6px;
+  text-shadow: 0 0 12px #FFD70088;
+}
+
+/* PROGRESS */
+.progress-wrap {
+  width: 90%; max-width: 500px;
+  background: #1a1a2e; border-radius: 20px;
+  height: 14px; border: 2px solid #333;
+  margin-bottom: 10px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FF6B35, #FFD700);
+  border-radius: 20px; transition: width 0.5s ease; width: 0%;
+}
+.progress-label { color: #888; font-size: 0.8rem; margin-bottom: 10px; }
+
+/* MAIN */
+.game-area {
+  display: flex;
+  gap: 28px;
+  width: 100%; max-width: 920px;
+  padding: 0 16px;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
+}
+
+/* ROBOT */
+.robot-panel {
+  flex: 0 0 432px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px;
+}
+.robot-stage {
+  width: 432px; height: 432px;
+  position: relative;
+  background: radial-gradient(circle, #1a1a3e 0%, #0a0a1a 100%);
+  border-radius: 20px; border: 2px solid #2a2a4a;
+  overflow: hidden;
+}
+.robot-img {
+  position: absolute; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+}
+.cover {
+  position: absolute;
+  background: rgba(10,10,26,0.85);
+  transition: opacity 0.7s ease;
+}
+.cover.hidden { opacity: 0; pointer-events: none; }
+#cover-head  { top: 0;   left: 0;   width: 100%; height: 22%; }
+#cover-torso { top: 22%; left: 0;   width: 100%; height: 33%; }
+#cover-arm-l { top: 22%; left: 0;   width: 22%;  height: 53%; }
+#cover-arm-r { top: 22%; right: 0;  width: 22%;  height: 53%; }
+#cover-legs  { top: 55%; left: 0;   width: 100%; height: 45%; }
+
+@keyframes shimmer {
+  0%   { box-shadow: inset 0 0 50px #FFD700; }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+.robot-stage.shimmer { animation: shimmer 0.9s ease-out; }
+
+@keyframes transform-spin {
+  0%   { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
+  40%  { transform: scale(1.15) rotate(10deg);  filter: brightness(2.5) hue-rotate(90deg); }
+  70%  { transform: scale(1.15) rotate(-10deg); filter: brightness(3) hue-rotate(180deg); }
+  100% { transform: scale(1)    rotate(0deg);   filter: brightness(1.4) drop-shadow(0 0 14px #FFD700); }
+}
+.robot-stage.transform-anim { animation: transform-spin 1.3s ease-in-out forwards; }
+
+.star {
+  position: absolute; font-size: 1.4rem; pointer-events: none;
+  animation: star-fly 1s ease-out forwards;
+}
+@keyframes star-fly {
+  0%   { opacity: 1; transform: translate(0,0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(0.2); }
+}
+
+.part-label {
+  font-size: 0.95rem; color: #FFD700;
+  min-height: 22px; text-align: center;
+}
+
+/* SENTENCE QUEUE */
+.queue-panel {
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* CURRENT CARD — big and prominent */
+.card-current {
+  background: #1e1a00;
+  border: 2px solid #FFD700;
+  border-radius: 18px;
+  padding: 20px 22px;
+  box-shadow: 0 0 20px #FFD70033;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+.card-current.fly-out {
+  transform: translateY(-80px);
+  opacity: 0;
+}
+.card-current .num { font-size: 0.7rem; color: #888; margin-bottom: 6px; }
+.card-current .sentence-text {
+  font-size: 1.3rem; color: #fff; line-height: 1.5;
+  margin-bottom: 14px;
+}
+.card-current .btns {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.btn-listen {
+  padding: 10px 22px;
+  background: #1a3a6a; color: #7ab8ff;
+  font-family: inherit; font-size: 1rem; font-weight: bold;
+  border: 2px solid #2a5a9a; border-radius: 22px; cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-listen:active { transform: scale(0.93); }
+.btn-done {
+  padding: 10px 26px;
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: #fff; font-family: inherit; font-size: 1.1rem; font-weight: bold;
+  border: none; border-radius: 22px; cursor: pointer;
+  box-shadow: 0 4px 14px #4CAF5044;
+  transition: transform 0.1s;
+}
+.btn-done:active { transform: scale(0.93); }
+
+/* UPCOMING CARDS */
+.card-upcoming {
+  background: #12122a;
+  border: 2px solid #2a2a4a;
+  border-radius: 14px;
+  padding: 12px 18px;
+  opacity: 0.6;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+.card-upcoming.slide-up {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+.card-upcoming .num { font-size: 0.65rem; color: #555; }
+.card-upcoming .sentence-text { font-size: 0.95rem; color: #aaa; line-height: 1.4; }
+
+/* COMPLETE OVERLAY */
+.complete-banner {
+  display: none; position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #000000bb;
+  z-index: 100; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.complete-banner.show { display: flex; }
+.complete-banner h2 {
+  font-size: 2.6rem; color: #FFD700;
+  text-shadow: 0 0 24px #FFD700;
+  animation: pulse 0.7s infinite alternate;
+}
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+.complete-banner p { color: #fff; font-size: 1.2rem; text-align: center; }
+.restart-btn {
+  padding: 14px 40px; background: #FFD700; color: #000;
+  font-family: inherit; font-size: 1.1rem; font-weight: bold;
+  border: none; border-radius: 26px; cursor: pointer; margin-top: 8px;
+}
+.restart-btn:hover { background: #fff; }
+</style>
+</head>
+<body>
+
+<h1>🤖 Build the Hero Robot! 🤖</h1>
+<div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+<div class="progress-label" id="progressLabel">0 / 16 sentences</div>
+
+<div class="game-area">
+
+  <!-- ROBOT -->
+  <div class="robot-panel">
+    <div class="robot-stage" id="robotStage">
+      <img class="robot-img" id="robotImg" src="images/robot_hero.png" alt="Hero Robot">
+      <video class="robot-img" id="robotVideo" src="images/robot_transform.mp4"
+             style="display:none;object-fit:cover" playsinline loop></video>
+      <div class="cover" id="cover-head"></div>
+      <div class="cover" id="cover-torso"></div>
+      <div class="cover" id="cover-arm-l"></div>
+      <div class="cover" id="cover-arm-r"></div>
+      <div class="cover" id="cover-legs"></div>
+    </div>
+    <div class="part-label" id="partLabel">🔒 문장을 읽으면 로봇이 완성돼요!</div>
+  </div>
+
+  <!-- QUEUE -->
+  <div class="queue-panel" id="queuePanel"></div>
+
+</div>
+
+<div class="complete-banner" id="completeBanner">
+  <h2>⚡ TRANSFORM! ⚡</h2>
+  <p>🎉 로봇 완성! 승한이 최고야! 🎉</p>
+  <button class="restart-btn" onclick="restart()">▶ 다시 하기</button>
+</div>
+
+<script>
+const SENTENCES = [
+  "Hello, everyone!",
+  "My name is Seunghan.",
+  "I am six years old.",
+  "Today, I want to talk about my future jobs.",
+  "I want to be a firefighter.",
+  "Firefighters are brave.",
+  "They help people and save lives.",
+  "Woo-woo!",
+  "I also want to be a police officer.",
+  "Police officers are strong and catch bad guys to keep us safe.",
+  "I would also like to be a doctor.",
+  "Doctors are kind because they help sick people feel better.",
+  "A firefighter, police officer, and doctor are what I want to be—",
+  "I want to help people!",
+  "That is my dream.",
+  "Thank you!"
+];
+
+const UNLOCK_AT = {
+  3:  { covers: ['cover-head'],                label: '🪖 머리 완성!' },
+  7:  { covers: ['cover-torso'],               label: '🛡 몸통 완성!' },
+  10: { covers: ['cover-arm-l','cover-arm-r'], label: '💪 팔 완성!' },
+  13: { covers: ['cover-legs'],                label: '🦵 다리 완성!' },
+  16: { covers: [],                            label: '⚡ 변신 완료!' }
+};
+
+let current = 0;
+
+/* ── AUDIO ── */
+let _voice = null;
+speechSynthesis.addEventListener('voiceschanged', pickVoice);
+pickVoice();
+
+function pickVoice() {
+  const vs = speechSynthesis.getVoices();
+  if (!vs.length) return;
+  _voice = vs.find(v => v.name === 'Samantha')
+    || vs.find(v => v.lang === 'en-US' && /female|woman/i.test(v.name))
+    || vs.find(v => v.lang.startsWith('en-US'))
+    || vs[0];
+}
+
+function speak(text) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.82; u.pitch = 1.4;
+    if (_voice) u.voice = _voice;
+    speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
+function playSuccess() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f; o.type = 'sine';
+      const t = ctx.currentTime + i * 0.13;
+      g.gain.setValueAtTime(0.28, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      o.start(t); o.stop(t + 0.25);
+    });
+  } catch(e) {}
+}
+
+function playTransform() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [261,329,392,523,659,784,1047].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f; o.type = 'square';
+      const t = ctx.currentTime + i * 0.09;
+      g.gain.setValueAtTime(0.14, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      o.start(t); o.stop(t + 0.2);
+    });
+  } catch(e) {}
+}
+
+/* ── RENDER ── */
+function renderQueue() {
+  const panel = document.getElementById('queuePanel');
+  panel.innerHTML = '';
+
+  if (current >= SENTENCES.length) return;
+
+  // Current card
+  const cur = document.createElement('div');
+  cur.className = 'card-current';
+  cur.id = 'card-current';
+  cur.innerHTML = `
+    <div class="num">${current + 1} / ${SENTENCES.length}</div>
+    <div class="sentence-text">${SENTENCES[current]}</div>
+    <div class="btns">
+      <button class="btn-listen" onclick="speak(SENTENCES[${current}])">🔊 듣기</button>
+      <button class="btn-done" onclick="advance()">✅ 말했어요!</button>
+    </div>
+  `;
+  panel.appendChild(cur);
+
+  // Upcoming cards (max 4 visible)
+  const upcomingCount = Math.min(4, SENTENCES.length - current - 1);
+  for (let i = 1; i <= upcomingCount; i++) {
+    const idx = current + i;
+    const el = document.createElement('div');
+    el.className = 'card-upcoming';
+    el.id = `card-up-${i}`;
+    el.innerHTML = `
+      <div class="num">${idx + 1} / ${SENTENCES.length}</div>
+      <div class="sentence-text">${SENTENCES[idx]}</div>
+    `;
+    panel.appendChild(el);
+  }
+}
+
+function advance() {
+  playSuccess();
+  try { speechSynthesis.cancel(); } catch(e) {}
+
+  current++;
+  updateProgress();
+
+  // Unlock robot part
+  if (UNLOCK_AT[current]) {
+    UNLOCK_AT[current].covers.forEach(id => revealPart(id));
+    document.getElementById('partLabel').textContent = UNLOCK_AT[current].label;
+    if (current === 16) {
+      playTransform();
+      // Switch to video
+      setTimeout(() => {
+        const img = document.getElementById('robotImg');
+        const vid = document.getElementById('robotVideo');
+        img.style.transition = 'opacity 0.6s';
+        img.style.opacity = '0';
+        setTimeout(() => {
+          img.style.display = 'none';
+          vid.style.display = 'block';
+          vid.play();
+        }, 600);
+        setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 2500);
+      }, 300);
+      return;
+    }
+  }
+
+  // Animate out then re-render
+  const curCard = document.getElementById('card-current');
+  if (curCard) {
+    curCard.style.transform = 'translateY(-70px)';
+    curCard.style.opacity = '0';
+  }
+  setTimeout(() => {
+    renderQueue();
+    if (current < SENTENCES.length) {
+      setTimeout(() => speak(SENTENCES[current]), 300);
+    }
+  }, 350);
+}
+
+function revealPart(coverId) {
+  const el = document.getElementById(coverId);
+  if (el) el.classList.add('hidden');
+  const stage = document.getElementById('robotStage');
+  stage.classList.add('shimmer');
+  setTimeout(() => stage.classList.remove('shimmer'), 1000);
+  for (let i = 0; i < 8; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.textContent = ['⭐','✨','💥','🌟'][i % 4];
+    s.style.left = (15 + Math.random() * 70) + '%';
+    s.style.top  = (15 + Math.random() * 70) + '%';
+    s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+    s.style.setProperty('--dy', (Math.random() * 100 - 60) + 'px');
+    s.style.animationDelay = (Math.random() * 0.3) + 's';
+    document.getElementById('robotStage').appendChild(s);
+    setTimeout(() => s.remove(), 1200);
+  }
+}
+
+function updateProgress() {
+  const pct = (current / SENTENCES.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${current} / ${SENTENCES.length} sentences`;
+}
+
+function restart() {
+  current = 0;
+  document.getElementById('completeBanner').classList.remove('show');
+  document.getElementById('partLabel').textContent = '🔒 문장을 읽으면 로봇이 완성돼요!';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressLabel').textContent = '0 / 16 sentences';
+  ['cover-head','cover-torso','cover-arm-l','cover-arm-r','cover-legs'].forEach(id => {
+    document.getElementById(id).classList.remove('hidden');
+  });
+  const stage = document.getElementById('robotStage');
+  stage.classList.remove('transform-anim', 'shimmer');
+  const vid = document.getElementById('robotVideo');
+  const img = document.getElementById('robotImg');
+  vid.pause(); vid.style.display = 'none';
+  img.style.display = 'block'; img.style.opacity = '1';
+  renderQueue();
+}
+
+renderQueue();
+setTimeout(() => speak(SENTENCES[0]), 700);
+</script>
+</body>
+</html>
