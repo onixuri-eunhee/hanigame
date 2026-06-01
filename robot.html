@@ -295,6 +295,7 @@ function playSuccess() {
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
       o.start(t); o.stop(t + 0.25);
     });
+    setTimeout(() => ctx.close(), 600);
   } catch(e) {}
 }
 
@@ -310,6 +311,7 @@ function playTransform() {
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
       o.start(t); o.stop(t + 0.2);
     });
+    setTimeout(() => ctx.close(), 1500);
   } catch(e) {}
 }
 
@@ -349,7 +351,15 @@ function renderQueue() {
   }
 }
 
+let _advancing = false;
+let _advanceTimer = null;
+let _initSpeakTimer = null;
+
 function advance() {
+  if (_advancing) return;
+  _advancing = true;
+  clearTimeout(_initSpeakTimer);
+
   playSuccess();
   try { speechSynthesis.cancel(); } catch(e) {}
 
@@ -360,9 +370,8 @@ function advance() {
   if (UNLOCK_AT[current]) {
     UNLOCK_AT[current].covers.forEach(id => revealPart(id));
     document.getElementById('partLabel').textContent = UNLOCK_AT[current].label;
-    if (current === 16) {
+    if (current === SENTENCES.length) {
       playTransform();
-      // Switch to video
       setTimeout(() => {
         const img = document.getElementById('robotImg');
         const vid = document.getElementById('robotVideo');
@@ -371,7 +380,7 @@ function advance() {
         setTimeout(() => {
           img.style.display = 'none';
           vid.style.display = 'block';
-          vid.play();
+          vid.play().catch(() => {});
         }, 600);
         setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 2500);
       }, 300);
@@ -385,7 +394,8 @@ function advance() {
     curCard.style.transform = 'translateY(-70px)';
     curCard.style.opacity = '0';
   }
-  setTimeout(() => {
+  _advanceTimer = setTimeout(() => {
+    _advancing = false;
     renderQueue();
     if (current < SENTENCES.length) {
       setTimeout(() => speak(SENTENCES[current]), 300);
@@ -420,6 +430,9 @@ function updateProgress() {
 }
 
 function restart() {
+  clearTimeout(_advanceTimer);
+  clearTimeout(_initSpeakTimer);
+  _advancing = false;
   current = 0;
   document.getElementById('completeBanner').classList.remove('show');
   document.getElementById('partLabel').textContent = '🔒 문장을 읽으면 로봇이 완성돼요!';
@@ -438,7 +451,7 @@ function restart() {
 }
 
 renderQueue();
-setTimeout(() => speak(SENTENCES[0]), 700);
+_initSpeakTimer = setTimeout(() => speak(SENTENCES[0]), 700);
 </script>
 </body>
 </html>
