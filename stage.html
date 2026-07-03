@@ -652,9 +652,20 @@ function camFollow(i) {
   camera.position.set(p.x - 5, p.y + 3.6, p.z + 7.5);
   camera.lookAt(p.x + 0.5, p.y + 1.2, p.z);
 }
+function fixCanvasSize() {
+  const c = renderer.domElement;
+  const pr = Math.min(devicePixelRatio, 3);
+  const w = Math.round(c.clientWidth * pr), h = Math.round(c.clientHeight * pr);
+  if (c.clientWidth > 0 && (c.width !== w || c.height !== h)) {
+    renderer.setSize(c.clientWidth, c.clientHeight, false);
+    camera.aspect = c.clientWidth / c.clientHeight;
+    camera.updateProjectionMatrix();
+  }
+}
 let _camI = 0;
 function render3DLoop() {
   animRAF = requestAnimationFrame(render3DLoop);
+  fixCanvasSize();   // 매 프레임 표시 크기와 렌더 해상도 일치 → 흐림 방지
   const t = (camShakeT += 0.016);
   if (flagMesh) flagMesh.rotation.y += 0.03;
   coins3d.forEach(c => { if (c.visible) c.rotation.y += 0.06; });
