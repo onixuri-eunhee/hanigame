@@ -282,13 +282,13 @@ function sfxSiren() {
   let t = c.currentTime + 0.03;
   o.frequency.setValueAtTime(lo, t);
   g.gain.setValueAtTime(0.0001, t);
-  for (let i = 0; i < cycles; i++) {        // 매 사이클 살짝 부풀었다 줄어드는 울림
-    o.frequency.linearRampToValueAtTime(hi, t + seg);
-    g.gain.linearRampToValueAtTime(peak, t + seg*0.5);
-    g.gain.linearRampToValueAtTime(peak*0.5, t + seg); t += seg;
-    o.frequency.linearRampToValueAtTime(lo, t + seg);
-    g.gain.linearRampToValueAtTime(peak, t + seg*0.5);
-    g.gain.linearRampToValueAtTime(peak*0.5, t + seg); t += seg;
+  for (let i = 0; i < cycles; i++) {        // 매 사이클: 위(hi)→아래(lo)로 오르내리며 살짝 부풀었다 줄어듦
+    [hi, lo].forEach(f => {
+      o.frequency.linearRampToValueAtTime(f, t + seg);
+      g.gain.linearRampToValueAtTime(peak, t + seg*0.5);
+      g.gain.linearRampToValueAtTime(peak*0.5, t + seg);
+      t += seg;
+    });
   }
   g.gain.linearRampToValueAtTime(0.0001, t + 0.15);   // 멀어지듯 사라짐
   o.start(c.currentTime + 0.03); o.stop(t + 0.2);
@@ -363,13 +363,22 @@ function speakSentence(i) {
 /* ══════════════════ 음성 인식 ══════════════════ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog = null, listening = false;
+function setMicListening() {   // 듣는 중 표시 + BGM 잠시 멈춤
+  listening = true; bgmPausedForMic = true;
+  const b = document.getElementById('micBtn'); b.classList.add('listening'); b.textContent = '🎙️ 듣는중';
+}
+function setMicIdle() {        // 대기 상태 복귀
+  listening = false; bgmPausedForMic = false;
+  const b = document.getElementById('micBtn'); b.classList.remove('listening'); b.textContent = '🎤 말하기';
+}
+function stopListening() { if (listening) { try { recog.stop(); } catch(e){} } }
 function initRecog() {
   if (!SR) return null;
   const r = new SR();
   r.lang = 'en-US'; r.continuous = false; r.interimResults = true; r.maxAlternatives = 3;
-  r.onstart = () => { listening = true; bgmPausedForMic = true; document.getElementById('micBtn').classList.add('listening'); document.getElementById('micBtn').textContent = '🎙️ 듣는중'; };
-  r.onend = () => { listening = false; bgmPausedForMic = false; document.getElementById('micBtn').classList.remove('listening'); document.getElementById('micBtn').textContent = '🎤 말하기'; };
-  r.onerror = (e) => { listening = false; bgmPausedForMic = false; document.getElementById('micBtn').classList.remove('listening'); document.getElementById('micBtn').textContent = '🎤 말하기';
+  r.onstart = setMicListening;
+  r.onend = setMicIdle;
+  r.onerror = (e) => { setMicIdle();
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showHeard('마이크를 허용해 주세요 🎤 (또는 "말했어요" 버튼)', true); };
   r.onresult = (ev) => {
     let txt = '';
@@ -382,17 +391,22 @@ function initRecog() {
 function onMic() {
   sfxClick(); ac();
   if (!SR) { showHeard('이 브라우저는 목소리 인식이 안돼요. "말했어요" 버튼을 눌러요 👇', true); return; }
-  if (listening) { try { recog.stop(); } catch(e){} return; }
+  if (listening) { stopListening(); return; }
   if (!recog) recog = initRecog();
   try { recog.start(); sfxMicOn(); } catch(e) { try { recog.stop(); } catch(_){} }
 }
+
+// 입력 잠금: 정답 연출 중(busy)이거나 월드 클리어 이후(idx>=TOTAL) 버튼/인식 무시
+function inputLocked() { return busy || idx >= TOTAL; }
+// 진행 중인 발화 취소: 사이렌 정지 + 대기중 사이렌 콜백 무효화 + TTS 취소 (한 동작)
+function cancelSpeech() { speakToken++; stopSiren(); try { speechSynthesis.cancel(); } catch(e){} }
 
 /* ── 매칭: 60% 단어 일치 ── */
 function normWords(s) {
   return s.toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
 }
 function checkAnswer(spoken) {
-  if (busy || idx >= TOTAL) return;   // 연출 중/종료 후 지연된 인식 결과 무시
+  if (inputLocked()) return;   // 연출 중/종료 후 지연된 인식 결과 무시
   const cur = SENTENCES[idx];
   const skip = new Set((cur.skip || []).map(x => x.toLowerCase()));
   const target = normWords(cur.t).filter(w => !skip.has(w));
@@ -413,8 +427,7 @@ function showHeard(msg, bad) {
 function succeed() {
   if (busy) return;
   busy = true; failCount = 0; hintLevel = 0;
-  speakToken++; stopSiren();            // 넘어가면 재생중 사이렌 정지 + 대기중 사이렌 콜백 무효화
-  try { speechSynthesis.cancel(); } catch(e){}
+  cancelSpeech();                       // 넘어가면 사이렌·TTS 정지
   sfxCoin();
   coins++; document.getElementById('coinCount').textContent = coins;
   showHeard('잘했어요! 🎉', false);
@@ -434,7 +447,7 @@ function fail(ratio) {
 
 /* ══════════════════ 힌트 ══════════════════ */
 function onHint() {
-  if (busy || idx >= TOTAL) return;   // 월드클리어 연출 중 클릭 방지
+  if (inputLocked()) return;   // 월드클리어 연출 중 클릭 방지
   sfxClick();
   hintLevel = Math.min(hintLevel + 1, 3);
   applyHint();
@@ -459,7 +472,7 @@ function hintText() {
   return full;                                         // 3: 전체
 }
 function maskWord(w) {
-  return w.replace(/[A-Za-z0-9]/g,'＿').replace(/[.,!?]/g, m=>m);
+  return w.replace(/[A-Za-z0-9]/g,'＿');   // 글자만 가림, 구두점은 그대로 남음
 }
 
 /* ══════════════════ 렌더 ══════════════════ */
@@ -477,14 +490,14 @@ function renderSentence() {
     ? '<span class="dim">＿</span>' : ch).join('');
 }
 function onListen() {
-  if (busy || idx >= TOTAL) return;
+  if (inputLocked()) return;
   sfxClick(); ac();
-  if (listening) { try { recog.stop(); } catch(e){} }  // 마이크가 TTS를 주워듣지 않게
+  stopListening();          // 마이크가 TTS를 주워듣지 않게
   speakSentence(idx);
 }
 function onDone()  {
-  if (busy || idx >= TOTAL) return;
-  if (listening) { try { recog.stop(); } catch(e){} }  // 넘어간 뒤 지연 인식으로 다음 문장 오통과 방지
+  if (inputLocked()) return;
+  stopListening();          // 넘어간 뒤 지연 인식으로 다음 문장 오통과 방지
   succeed();
 }   // 안전망 버튼 — 항상 통과
 
@@ -533,8 +546,7 @@ function finishAll() {
   // 자원 정리: 배경음악 정지 + 3D 렌더 루프 중단 (숨은 캔버스 GPU/배터리 낭비 방지)
   if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
   bgmOn = false;
-  speakToken++; stopSiren();
-  try { speechSynthesis.cancel(); } catch(e){}
+  cancelSpeech();
   if (animRAF) { cancelAnimationFrame(animRAF); animRAF = null; }
   document.getElementById('gameScreen').classList.remove('active');
   document.getElementById('winScreen').classList.add('active');
@@ -576,7 +588,7 @@ function startGame(w) {
 }
 
 /* ══════════════════ 3D 무대 (Three.js) + 2D 폴백 ══════════════════ */
-let use3D = false, THREE_R = null;
+let use3D = false;
 let scene, camera, renderer, heroSprite, heroShadow, steps3d = [], flagMesh;
 let clouds3d = [], coins3d = [], castleGrp = null;
 let heroTex = { idle:null, jump:null, win:null };
@@ -754,7 +766,6 @@ function fixCanvasSize() {
     camera.updateProjectionMatrix();
   }
 }
-let _camI = 0;
 function render3DLoop() {
   animRAF = requestAnimationFrame(render3DLoop);
   fixCanvasSize();   // 매 프레임 표시 크기와 렌더 해상도 일치 → 흐림 방지
@@ -770,8 +781,7 @@ function render3DLoop() {
 
 /* ── 2D 폴백 ── */
 let ctx2d, cw, ch;
-function init2D() {
-  use3D = false;
+function init2D() {   // initStage()가 호출 전 use3D=false 설정함
   document.getElementById('stageCanvas').style.display = 'none';
   const cv = document.getElementById('stage2d');
   cv.style.display = 'block';
