@@ -250,28 +250,39 @@ function sfxWin() {
   for (let i=0;i<8;i++) noise(0.4+i*0.12, 0.14, 0.12);   // 박수/환호
   [392,523,659].forEach(f=>tone(f,0.9,0.9,'sine',0.14));  // 화음
 }
-// 소방차 사이렌: 두 음 사이를 길게 오르내리는 "위우~위우~" 울림
-function sfxSiren(cb) {
-  const c = ac();
-  if (!c) { if (cb) setTimeout(cb, 1800); return; }
+// 소방차 사이렌: 두 음 사이를 길게 오르내리는 "위우~위우~" 울림.
+// _siren에 노드 보관 → 다음 문장으로 넘어가면 stopSiren()으로 즉시 정지.
+let _siren = null;
+function stopSiren() {
+  if (!_siren) return;
+  try { _siren.osc.stop(); } catch(e){}
+  try { _siren.g.disconnect(); } catch(e){}
+  _siren = null;
+}
+function sfxSiren() {
+  stopSiren();                       // 겹침 방지: 이전 사이렌 정지
+  const c = ac(); if (!c) return;
   const o = c.createOscillator(), g = c.createGain();
   o.type = 'sawtooth';
-  o.connect(g); g.connect(masterGain() || c.destination);
-  const lo = 620, hi = 1050, seg = 0.55, cycles = 3;
-  let t = c.currentTime + 0.05;
+  const filt = c.createBiquadFilter();     // 톱니파 거친 고음 완화(덜 날카롭게)
+  filt.type = 'lowpass'; filt.frequency.value = 1300;
+  o.connect(filt); filt.connect(g); g.connect(masterGain() || c.destination);
+  const lo = 620, hi = 990, seg = 0.55, cycles = 3, peak = 0.10;
+  let t = c.currentTime + 0.03;
   o.frequency.setValueAtTime(lo, t);
-  for (let i = 0; i < cycles; i++) {          // 위로 → 아래로 부드럽게 반복
-    o.frequency.linearRampToValueAtTime(hi, t + seg); t += seg;
-    o.frequency.linearRampToValueAtTime(lo, t + seg); t += seg;
+  g.gain.setValueAtTime(0.0001, t);
+  for (let i = 0; i < cycles; i++) {        // 매 사이클 살짝 부풀었다 줄어드는 울림
+    o.frequency.linearRampToValueAtTime(hi, t + seg);
+    g.gain.linearRampToValueAtTime(peak, t + seg*0.5);
+    g.gain.linearRampToValueAtTime(peak*0.5, t + seg); t += seg;
+    o.frequency.linearRampToValueAtTime(lo, t + seg);
+    g.gain.linearRampToValueAtTime(peak, t + seg*0.5);
+    g.gain.linearRampToValueAtTime(peak*0.5, t + seg); t += seg;
   }
-  const end = t;
-  g.gain.setValueAtTime(0.0001, c.currentTime + 0.05);
-  g.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 0.15);   // 서서히 커짐
-  g.gain.setValueAtTime(0.16, end - 0.3);
-  g.gain.exponentialRampToValueAtTime(0.0001, end);                  // 멀어지듯 사라짐
-  o.start(c.currentTime + 0.05); o.stop(end + 0.05);
-  const dur = (end - c.currentTime) * 1000;
-  if (cb) setTimeout(cb, dur);
+  g.gain.linearRampToValueAtTime(0.0001, t + 0.15);   // 멀어지듯 사라짐
+  o.start(c.currentTime + 0.03); o.stop(t + 0.2);
+  _siren = { osc: o, g };
+  o.onended = () => { if (_siren && _siren.osc === o) _siren = null; };
 }
 
 /* ── 배경음악 (칩튠 루프) ── */
@@ -319,12 +330,19 @@ function speak(text, cb) {
   } catch(e) { if (cb) cb(); }
 }
 // 문장 읽어주기. siren 문장은 "Woo-woo!"를 빼고 읽은 뒤 소방차 사이렌으로 대체.
+// speakToken: 새로 재생/취소될 때마다 증가 → 취소된 이전 발화의 onend가
+// 사이렌을 잘못 울리는 것(중복·조기 발사) 방지.
+let speakToken = 0;
 function speakSentence(i) {
+  speakToken++;
   const s = SENTENCES[i];
   if (s.siren) {
     ac();
+    const token = speakToken;
     const words = s.t.replace(/woo-?woo!?/ig, '').trim();  // 앞부분만 읽고
-    speak(words, () => sfxSiren());                        // 끝나면 사이렌 "위우~위우~"
+    speak(words, () => {                                   // 끝나면 사이렌 "위우~위우~"
+      if (token === speakToken && idx === i && !busy) sfxSiren();
+    });
   } else {
     speak(s.t);
   }
@@ -383,6 +401,8 @@ function showHeard(msg, bad) {
 function succeed() {
   if (busy) return;
   busy = true; failCount = 0; hintLevel = 0;
+  speakToken++; stopSiren();            // 넘어가면 재생중 사이렌 정지 + 대기중 사이렌 콜백 무효화
+  try { speechSynthesis.cancel(); } catch(e){}
   sfxCoin();
   coins++; document.getElementById('coinCount').textContent = coins;
   showHeard('잘했어요! 🎉', false);
@@ -501,6 +521,8 @@ function finishAll() {
   // 자원 정리: 배경음악 정지 + 3D 렌더 루프 중단 (숨은 캔버스 GPU/배터리 낭비 방지)
   if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
   bgmOn = false;
+  speakToken++; stopSiren();
+  try { speechSynthesis.cancel(); } catch(e){}
   if (animRAF) { cancelAnimationFrame(animRAF); animRAF = null; }
   document.getElementById('gameScreen').classList.remove('active');
   document.getElementById('winScreen').classList.add('active');
