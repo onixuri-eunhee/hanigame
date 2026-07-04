@@ -255,9 +255,20 @@ function sfxWin() {
 let _siren = null;
 function stopSiren() {
   if (!_siren) return;
-  try { _siren.osc.stop(); } catch(e){}
-  try { _siren.g.disconnect(); } catch(e){}
-  _siren = null;
+  const s = _siren; _siren = null;
+  const c = ac();
+  try {
+    if (c) {                                 // 뚝 소리 방지: 40ms 페이드 후 정지
+      const now = c.currentTime;
+      s.g.gain.cancelScheduledValues(now);
+      s.g.gain.setValueAtTime(s.g.gain.value, now);
+      s.g.gain.linearRampToValueAtTime(0.0001, now + 0.04);
+      s.osc.stop(now + 0.05);
+      setTimeout(() => { try { s.g.disconnect(); } catch(e){} }, 100);
+    } else {
+      s.osc.stop(); s.g.disconnect();
+    }
+  } catch(e){}
 }
 function sfxSiren() {
   stopSiren();                       // 겹침 방지: 이전 사이렌 정지
@@ -335,6 +346,7 @@ function speak(text, cb) {
 let speakToken = 0;
 function speakSentence(i) {
   speakToken++;
+  stopSiren();                 // 다시 누르면 이전 사이렌 정지 (새 낭독 위에 겹치지 않게)
   const s = SENTENCES[i];
   if (s.siren) {
     ac();
